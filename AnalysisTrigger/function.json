@@ -1,0 +1,19 @@
+{
+  "scriptFile": "__init__.py",
+  "bindings": [
+    {
+      "name": "msg",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "%ANALYSIS_QUEUE_NAME%",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "blob",
+      "direction": "out",
+      "name": "output",
+      "path": "%ANALYSIS_CONTAINER_NAME%/{datasetId}.csv",
+      "connection": "AzureWebJobsStorage"
+    }
+  ]
+}

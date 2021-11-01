@@ -1,0 +1,7 @@
+git+git://github.com/safeh2o/swot-python-analysis@master
+azure-storage-blob
+azure-mgmt-containerinstance
+azure-identity
+pymongo
+dnspython
+beautifulsoup4

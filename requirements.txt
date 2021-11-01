@@ -1,0 +1,17 @@
+# DO NOT include azure-functions-worker in this file
+# The Python Worker is managed by Azure Functions platform
+# Manually managing azure-functions-worker may cause unexpected issues
+
+
+azure-functions
+azure-mgmt-containerinstance
+azure-mgmt-containerregistry
+# azure-mgmt-resource
+azure-identity==1.7.0b3
+# msrestazure
+
+pymongo
+azure-storage-blob
+black
+openpyxl
+dnspython

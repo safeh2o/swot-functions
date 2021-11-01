@@ -1,0 +1,14 @@
+.git
+Dockerfile
+.DS_Store
+.gitignore
+README.md
+env.*
+/devops/*
+node_modules
+local.settings.json
+# To prevent storing dev/temporary container data
+*.csv
+/tmp/*
+.vscode/
+.venv/

@@ -1,0 +1,126 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "func",
+      "command": "host start",
+      "problemMatcher": "$func-python-watch",
+      "isBackground": true,
+      "dependsOn": "pipInstall"
+    },
+    {
+      "label": "pipInstall",
+      "type": "shell",
+      "osx": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "windows": {
+        "command": "${config:azureFunctions.pythonVenv}\\Scripts\\python -m pip install -r requirements.txt"
+      },
+      "linux": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build eo",
+      "type": "docker-build",
+      "dockerBuild": {
+        "context": "${workspaceFolder}/containers",
+        "dockerfile": "${workspaceFolder}/containers/eo/Dockerfile",
+        "tag": "${config:containers.registryName}/servereo:latest"
+      }
+    },
+    {
+      "label": "build ann",
+      "type": "docker-build",
+      "dockerBuild": {
+        "context": "${workspaceFolder}/containers",
+        "dockerfile": "${workspaceFolder}/containers/ann/Dockerfile",
+        "tag": "${config:containers.registryName}/serverann:latest"
+      }
+    },
+    {
+      "label": "build fx",
+      "type": "docker-build",
+      "dockerBuild": {
+        "context": "${workspaceFolder}",
+        "dockerfile": "${workspaceFolder}/Dockerfile",
+        "tag": "${config:containers.registryName}/swotfx:latest"
+      }
+    },
+    {
+      "label": "acr login",
+      "type": "shell",
+      "command": "az acr login -n ${config:containers.registryName}"
+    },
+    {
+      "label": "push fx",
+      "type": "shell",
+      "command": "docker push ${config:containers.registryName}/swotfx",
+      "dependsOn": ["acr login"]
+    },
+    {
+      "label": "push ann",
+      "type": "shell",
+      "command": "docker push ${config:containers.registryName}/serverann",
+      "dependsOn": ["acr login"]
+    },
+    {
+      "label": "push eo",
+      "type": "shell",
+      "command": "docker push ${config:containers.registryName}/servereo",
+      "dependsOn": ["acr login"]
+    },
+    {
+      "label": "build and push",
+      "type": "shell",
+      "command": "echo Built and pushed containers...",
+      "dependsOn": ["build ann", "build eo", "push ann", "push eo"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "cd fx",
+      "type": "shell",
+      "command": "echo Built and pushed function...",
+      "dependsOn": ["build fx", "push fx"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "test eo",
+      "type": "docker-run",
+      "dockerRun": {
+        "image": "${config:containers.registryName}/servereo",
+        "env": {
+          "AZURE_STORAGE_KEY": "${config:containers.env.AZURE_STORAGE_KEY}",
+          "MONGODB_CONNECTION_STRING": "${config:containers.env.MONGODB_CONNECTION_STRING}",
+          "SRC_CONTAINER_NAME": "${config:containers.env.SRC_CONTAINER_NAME}",
+          "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
+          "DATASET_ID": "${config:containers.env.DATASET_ID}",
+          "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
+          "CONFIDENCE_LEVEL": "minDecay",
+          "MAX_DURATION": "3"
+        }
+      }
+    },
+    {
+      "label": "test ann",
+      "type": "docker-run",
+      "dockerRun": {
+        "image": "${config:containers.registryName}/serverann",
+        "env": {
+          "AZURE_STORAGE_KEY": "${config:containers.env.AZURE_STORAGE_KEY}",
+          "MONGODB_CONNECTION_STRING": "${config:containers.env.MONGODB_CONNECTION_STRING}",
+          "SRC_CONTAINER_NAME": "${config:containers.env.SRC_CONTAINER_NAME}",
+          "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
+          "DATASET_ID": "${config:containers.env.DATASET_ID}",
+          "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
+          "NETWORK_COUNT": "5",
+          "EPOCHS": "100"
+        }
+      }
+    }
+  ]
+}
