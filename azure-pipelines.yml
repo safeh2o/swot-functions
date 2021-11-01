@@ -1,35 +1,24 @@
 # Build and push functions image to container registry
+# This pipeline currently exists because there is no current support for GitHub integration triggers straight from a Release pipeline, so we're using an artifact trigger instead
 
 trigger: [master, prod]
 pr: none
 
-pool:
-  vmImage: ubuntu-latest
+variables:
+    vmImageName: "ubuntu-latest"
 
-steps:
-- task: Docker@2
-  inputs:
-    containerRegistry: 'sandbox_cr'
-    repository: 'swotfx'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    tags: 'latest'
-  displayName: 'Build and push functions image'
-
-- task: Docker@2
-  inputs:
-    containerRegistry: 'sandbox_cr'
-    repository: 'serverann'
-    command: 'buildAndPush'
-    Dockerfile: 'containers/ann/Dockerfile'
-    tags: 'latest'
-  displayName: 'Build and push ANN image'
-
-- task: Docker@2
-  inputs:
-    containerRegistry: 'sandbox_cr'
-    repository: 'servereo'
-    command: 'buildAndPush'
-    Dockerfile: 'containers/eo/Dockerfile'
-    tags: 'latest'
-  displayName: 'Build and push EO image'
+stages:
+    - stage: Build
+      displayName: Create Artifact
+      jobs:
+          - job: Build
+            displayName: Create Artifact
+            pool:
+                vmImage: $(vmImageName)
+            steps:
+                - task: PublishPipelineArtifact@1
+                  displayName: Publish Artifacts
+                  inputs:
+                      targetPath: "$(Build.SourcesDirectory)"
+                      publishLocation: "pipeline"
+                      artifact: $(Build.BuildId)
