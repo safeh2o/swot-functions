@@ -84,8 +84,9 @@ def main(msg: func.QueueMessage) -> None:
     is_overwriting = upl["overwriting"]
     in_container_name = upl["containerName"]
 
-    blob_sc = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-    blob_cc = blob_sc.get_container_client(in_container_name)
+    blob_cc = ContainerClient.from_connection_string(
+        AZURE_STORAGE_CONNECTION_STRING, in_container_name
+    )
 
     blobs = blob_cc.list_blobs(name_starts_with=upload_id)
 
