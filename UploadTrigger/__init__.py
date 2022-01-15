@@ -48,9 +48,9 @@ def convert_xlsx_blob_to_csv(blob_client: BlobClient, fp: TextIOWrapper):
     xlsx_fp.write(blob_client.download_blob().readall())
     xlsx_fp.close()
 
-    wb = openpyxl.load_workbook(xlsx_fp.name, read_only=True)
+    wb = openpyxl.load_workbook(xlsx_fp.name, read_only=True, data_only=True)
     sh = wb.active
-    wr = csv.writer(fp, quoting=csv.QUOTE_MINIMAL)
+    wr = csv.writer(fp, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
 
     for row in sh.rows:
         rowvalues = []

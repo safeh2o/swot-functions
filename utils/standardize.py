@@ -100,6 +100,38 @@ def round_time(dt: datetime):
     return dt - timedelta(microseconds=int(dt.strftime("%f")))
 
 
+def format_unknown_date(date_string: str):
+    try:
+        return round_time(datetime(1900, 1, 1) + timedelta(days=float(date_string)))
+    except ValueError:
+        return format_plain_date(date_string)
+
+
+def format_plain_date(date_string: str):
+    spacer = " "
+    if "T" in date_string:
+        spacer = "T"
+    if len(date_string) == 16:
+        date_format = f"%Y-%m-%d{spacer}%H:%M"
+    elif len(date_string) == 19:
+        date_format = f"%Y-%m-%d{spacer}%H:%M:%S"
+    elif len(date_string) == 23:
+        date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f"
+    elif len(date_string) == 29:
+        date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
+    else:
+        return None
+
+    return datetime.strptime(date_string, date_format)
+
+
+def try_format(num_string: str, cast_type):
+    try:
+        return cast_type(num_string)
+    except:
+        return None
+
+
 def extract(filename: str) -> list[Datapoint]:
     datapoints = []
 
@@ -111,71 +143,23 @@ def extract(filename: str) -> list[Datapoint]:
     for col in columns:
         indices[col] = [i for i, x in enumerate(header_line) if col in x][0]
 
-    for l in file:
+    for row_num, l in enumerate(file, 1):
         # Skip over lines without six elements and empty lines
-        l = l.rstrip('\n')
+        l = l.rstrip("\n")
         if not l:
             continue
 
         line = l.strip().split(",")
 
-        try:
-            ts_date = round_time(
-                datetime(1900, 1, 1)
-                + timedelta(days=float(line[indices["ts_datetime"]]))
-            )
-        except ValueError:
-            try:
-                ts_date = datetime.strptime(
-                    line[indices["ts_datetime"]], "%Y-%m-%dT%H:%M"
-                )
-            except ValueError:
-                try:
-                    ts_date = datetime.strptime(
-                        line[indices["ts_datetime"]], "%Y-%m-%dT%H:%M:%S.%f%z"
-                    )
-                except ValueError:
-                    ts_date = None
+        ts_date = format_unknown_date(line[indices["ts_datetime"]])
+        hh_date = format_unknown_date(line[indices["hh_datetime"]])
+        ts_frc = try_format(line[indices["ts_frc"]], float)
+        hh_frc = try_format(line[indices["hh_frc"]], float)
+        ts_cond = try_format(line[indices["ts_cond"]], int)
+        ts_temp = try_format(line[indices["ts_wattemp"]], float)
 
-        try:
-            hh_date = round_time(
-                datetime(1900, 1, 1)
-                + timedelta(days=float(line[indices["hh_datetime"]]))
-            )
-        except ValueError:
-            try:
-                hh_date = datetime.strptime(
-                    line[indices["hh_datetime"]], "%Y-%m-%dT%H:%M"
-                )
-            except ValueError:
-                try:
-                    hh_date = datetime.strptime(
-                        line[indices["hh_datetime"]], "%Y-%m-%dT%H:%M:%S.%f%z"
-                    )
-                except ValueError:
-                    hh_date = None
-
-        try:
-            ts_frc = float(line[indices["ts_frc"]])
-        except ValueError:
-            ts_frc = None
-
-        try:
-            hh_frc = float(line[indices["hh_frc"]])
-        except ValueError:
-            hh_frc = None
-
-        try:
-            ts_cond = int(line[indices["ts_cond"]])
-        except ValueError:
-            ts_cond = None
-
-        try:
-            ts_temp = int(round(float(line[indices["ts_wattemp"]])))
-        except ValueError:
-            ts_temp = None
-
-        datapoints.append(Datapoint(ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp))
+        datapoint = Datapoint(ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp)
+        datapoints.append(datapoint)
 
     file.close()
     return datapoints
