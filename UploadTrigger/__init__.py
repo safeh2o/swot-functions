@@ -6,6 +6,7 @@ from pymongo import MongoClient
 import os
 from bson.objectid import ObjectId
 from utils.standardize import extract
+from utils.mailing import send_mail
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from uuid import uuid4
 import certifi
@@ -67,6 +68,7 @@ def main(msg: func.QueueMessage) -> None:
     ca = certifi.where()
     msg_json = msg.get_json()
     upload_id = msg_json["uploadId"]
+    uploader_email = msg_json["uploaderEmail"]
     logging.info(
         "Python queue trigger function processed a queue item: %s",
         upload_id,
@@ -89,6 +91,7 @@ def main(msg: func.QueueMessage) -> None:
     )
 
     blobs = blob_cc.list_blobs(name_starts_with=upload_id)
+    errors = []
 
     for blob in blobs:
         # generate temp file
@@ -110,9 +113,15 @@ def main(msg: func.QueueMessage) -> None:
             raise TypeError(f"Invalid file extension {ext}")
 
         fp.close()
-        datapoints = extract(tmpname)
+        datapoint_collection = db.get_collection("datapoints")
+        datapoints, errors_in_file = extract(tmpname)
+        if errors_in_file:
+            filename_as_uploaded = "_".join(blob.name.split("_")[1:])
+            errors.append(
+                {"filename": filename_as_uploaded, "errors_in_file": errors_in_file}
+            )
+
         for datapoint in datapoints:
-            datapoint_collection = db.get_collection("datapoints")
             datapoint_collection.insert_one(
                 datapoint.to_document(
                     upload=ObjectId(upload_id),
@@ -126,3 +135,4 @@ def main(msg: func.QueueMessage) -> None:
         os.remove(tmpname)
 
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "ready"}})
+    send_mail(uploader_email, errors)

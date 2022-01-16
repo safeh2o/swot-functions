@@ -50,6 +50,26 @@ class Datapoint(object):
             **kwargs,
         }
 
+    def to_json(self) -> dict:
+        if self.ts_date:
+            ts_date = datetime.isoformat(self.ts_date)
+        else:
+            ts_date = None
+
+        if self.hh_date:
+            hh_date = datetime.isoformat(self.hh_date)
+        else:
+            hh_date = None
+
+        return {
+            "tsDate": ts_date,
+            "hhDate": hh_date,
+            "tsFrc": self.ts_frc,
+            "hhFrc": self.hh_frc,
+            "tsCond": self.ts_cond,
+            "tsTemp": self.ts_temp,
+        }
+
     def to_csv_line(self) -> str:
         values = []
         for column in self.DEFAULT_MAPPING.values():
@@ -132,8 +152,27 @@ def try_format(num_string: str, cast_type):
         return None
 
 
+def get_bad_columns(datapoint: Datapoint):
+    bad_columns = set()
+    if not datapoint.ts_date:
+        bad_columns.add("ts_date")
+    if not datapoint.hh_date:
+        bad_columns.add("hh_date")
+
+    # if both dates exist but ts > hh, then highlight both columns
+    if (
+        datapoint.ts_date != None
+        and datapoint.hh_date != None
+        and datapoint.ts_date > datapoint.hh_date
+    ):
+        bad_columns.update({"ts_date", "hh_date"})
+
+    return list(bad_columns)
+
+
 def extract(filename: str) -> list[Datapoint]:
     datapoints = []
+    errors = []
 
     file = open(filename, "r")
     header_line = file.readline().rstrip("\n")
@@ -143,7 +182,7 @@ def extract(filename: str) -> list[Datapoint]:
     for col in columns:
         indices[col] = [i for i, x in enumerate(header_line) if col in x][0]
 
-    for row_num, l in enumerate(file, 1):
+    for row_number, l in enumerate(file, 1):
         # Skip over lines without six elements and empty lines
         l = l.rstrip("\n")
         if not l:
@@ -159,7 +198,18 @@ def extract(filename: str) -> list[Datapoint]:
         ts_temp = try_format(line[indices["ts_wattemp"]], float)
 
         datapoint = Datapoint(ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp)
-        datapoints.append(datapoint)
+        errors_in_datapoint = get_bad_columns(datapoint)
+
+        if errors_in_datapoint:
+            errors.append(
+                {
+                    "row_number": row_number,
+                    "datapoint": datapoint.to_json(),
+                    "bad_columns": errors_in_datapoint,
+                }
+            )
+        else:
+            datapoints.append(datapoint)
 
     file.close()
-    return datapoints
+    return datapoints, errors
