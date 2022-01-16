@@ -35,8 +35,16 @@ SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
 REGISTRY_NAME = os.getenv("REGISTRY_NAME")
 RG_LOCATION = os.getenv("RG_LOCATION")
 RG_NAME = os.getenv("RG_NAME")
+WEBURL = os.getenv("WEBURL").rstrip("/")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID = os.getenv(
+    "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"
+)
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 CONTAINER_NAMES = "serverann,servereo"
+
+if not WEBURL.startswith("http"):
+    WEBURL = f"https://{WEBURL}"
 
 
 class ContextFilter(logging.Filter):
@@ -160,6 +168,9 @@ def main(
         "CLIENT_SECRET": CLIENT_SECRET,
         "SUBSCRIPTION_ID": SUBSCRIPTION_ID,
         "RG_NAME": RG_NAME,
+        "SENDGRID_API_KEY": SENDGRID_API_KEY,
+        "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
+        "WEBURL": WEBURL,
     }
 
     create_container_group(

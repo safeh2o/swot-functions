@@ -40,6 +40,11 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
 RG_NAME = os.getenv("RG_NAME")
+SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID = os.getenv(
+    "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"
+)
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+WEBURL = os.getenv("WEBURL")
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
 
 
@@ -100,15 +105,25 @@ def get_dataset_collection() -> Collection:
     return db.get_collection("datasets")
 
 
+def get_user(userId):
+    db = MongoClient(MONGODB_CONNECTION_STRING).get_database()
+    user_collection = db.get_collection("users")
+    return user_collection.find_one({"_id": userId})
+
+
 def is_all_analysis_complete() -> bool:
-    dataset_collection = get_dataset_collection()
-    dataset = dataset_collection.find_one({"_id": ObjectId(DATASET_ID)})
+    dataset = get_dataset()
     return all(
         [
             "status" in dataset and analysis_method.value in dataset["status"]
             for analysis_method in AnalysisMethod
         ]
     )
+
+
+def get_dataset():
+    dataset_collection = get_dataset_collection()
+    return dataset_collection.find_one({"_id": ObjectId(DATASET_ID)})
 
 
 def remove_container_group():
@@ -118,6 +133,27 @@ def remove_container_group():
     ci_client = ContainerInstanceManagementClient(sp, subscription_id=SUBSCRIPTION_ID)
     logging.info(f"Deleting container group {DATASET_ID}")
     ci_client.container_groups.begin_delete(RG_NAME, DATASET_ID)
+
+
+def send_analysis_confirmation_email():
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail
+
+    dataset = get_dataset()
+    user = get_user(dataset["user"])
+    results_url = f"{WEBURL}/results/{DATASET_ID}"
+
+    message = Mail(from_email="no-reply@safeh2o.app", to_emails=user.email)
+    message.template_id = SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID
+    message.dynamic_template_data = {"resultsUrl": results_url}
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+    except Exception as e:
+        print(e)
 
 
 def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
@@ -132,3 +168,4 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
 
     if is_all_analysis_complete():
         remove_container_group()
+        send_analysis_confirmation_email()
