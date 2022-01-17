@@ -100,6 +100,9 @@
           "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
           "DATASET_ID": "${config:containers.env.DATASET_ID}",
           "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
+          "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
+          "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
+          "WEBURL": "${config:containers.env.WEBURL}",
           "CONFIDENCE_LEVEL": "minDecay",
           "MAX_DURATION": "3"
         }
@@ -117,6 +120,9 @@
           "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
           "DATASET_ID": "${config:containers.env.DATASET_ID}",
           "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
+          "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
+          "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
+          "WEBURL": "${config:containers.env.WEBURL}",
           "NETWORK_COUNT": "5",
           "EPOCHS": "100"
         }
