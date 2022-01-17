@@ -5,3 +5,4 @@ azure-identity
 pymongo
 dnspython
 beautifulsoup4
+sendgrid

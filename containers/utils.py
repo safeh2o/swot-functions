@@ -143,7 +143,7 @@ def send_analysis_confirmation_email():
     user = get_user(dataset["user"])
     results_url = f"{WEBURL}/results/{DATASET_ID}"
 
-    message = Mail(from_email="no-reply@safeh2o.app", to_emails=user.email)
+    message = Mail(from_email="no-reply@safeh2o.app", to_emails=user["email"])
     message.template_id = SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID
     message.dynamic_template_data = {"resultsUrl": results_url}
     try:
@@ -167,5 +167,9 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
     )
 
     if is_all_analysis_complete():
-        remove_container_group()
+        try:
+            remove_container_group()
+        except:
+            logging.error(f"Error while trying to remove container group {DATASET_ID}")
+        logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
         send_analysis_confirmation_email()
