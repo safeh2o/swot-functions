@@ -10,13 +10,6 @@
       "request": "attach",
       "port": 9091,
       "preLaunchTask": "func: host start"
-    },
-    {
-      "name": "Python: Current File",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal"
     }
   ]
 }

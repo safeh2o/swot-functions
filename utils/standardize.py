@@ -153,19 +153,35 @@ def try_format(num_string: str, cast_type):
 
 
 def get_bad_columns(datapoint: Datapoint):
+    TWO_DAYS = 48 * 3600  # two days in seconds
     bad_columns = set()
     if not datapoint.ts_date:
         bad_columns.add("ts_date")
     if not datapoint.hh_date:
         bad_columns.add("hh_date")
 
-    # if both dates exist but ts > hh, then highlight both columns
     if (
         datapoint.ts_date != None
         and datapoint.hh_date != None
-        and datapoint.ts_date > datapoint.hh_date
+        and (
+            datapoint.ts_date > datapoint.hh_date  # if tapstand is later than household
+            or (datapoint.hh_date - datapoint.ts_date).total_seconds()
+            >= TWO_DAYS  # if time difference is two days or greater
+        )
     ):
-        bad_columns.update({"ts_date", "hh_date"})
+        bad_columns.update({"ts_date", "hh_date"})  # highlight both ts and hh dates
+
+    if datapoint.ts_frc == None or datapoint.ts_frc <= 0:
+        bad_columns.add("ts_frc")
+    if datapoint.hh_frc == None or datapoint.hh_frc <= 0:
+        bad_columns.add("hh_frc")
+
+    if (
+        datapoint.hh_frc
+        and datapoint.ts_frc
+        and datapoint.hh_frc - datapoint.ts_frc > 0.06
+    ):
+        bad_columns.update({"ts_frc", "hh_frc"})
 
     return list(bad_columns)
 
