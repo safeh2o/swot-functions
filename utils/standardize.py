@@ -155,9 +155,9 @@ def try_format(num_string: str, cast_type):
 def get_bad_columns(datapoint: Datapoint):
     TWO_DAYS = 48 * 3600  # two days in seconds
     bad_columns = set()
-    if not datapoint.ts_date:
+    if not datapoint.ts_date or datapoint.ts_date > datetime.now():
         bad_columns.add("ts_date")
-    if not datapoint.hh_date:
+    if not datapoint.hh_date or datapoint.hh_date > datetime.now():
         bad_columns.add("hh_date")
 
     if (
