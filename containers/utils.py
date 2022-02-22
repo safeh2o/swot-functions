@@ -173,3 +173,4 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
             logging.error(f"Error while trying to remove container group {DATASET_ID}")
         logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
         send_analysis_confirmation_email()
+        update_dataset({"isComplete": True})
