@@ -99,7 +99,9 @@ def main(msg: func.QueueMessage) -> None:
         # standardize it, returning list of DataPoint objects
         # add overwriting flag
         bc = blob_cc.get_blob_client(blob)
-        fp = tempfile.NamedTemporaryFile(suffix=".csv", mode="w", delete=False)
+        fp = tempfile.NamedTemporaryFile(
+            suffix=".csv", mode="w", newline="", delete=False
+        )
         tmpname = fp.name
         # handle blob by extension
         ext = blob.name.split(".")[-1]

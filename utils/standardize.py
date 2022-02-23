@@ -138,6 +138,9 @@ def format_plain_date(date_string: str):
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S"
     elif len(date_string) == 23:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f"
+    elif len(date_string) >= 26 and len(date_string) < 29:
+        date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
+        date_string = date_string[:26] + ":00"
     elif len(date_string) == 29:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
     else:
@@ -200,7 +203,7 @@ def extract(filename: str) -> list[Datapoint]:
     for col in columns:
         indices[col] = [i for i, x in enumerate(header_line) if col in x][0]
 
-    for row_number, l in enumerate(file, 1):
+    for row_number, l in enumerate(file, 2):
         # Skip over lines without six elements and empty lines
         l = l.rstrip("\n")
         if not l:
@@ -212,20 +215,19 @@ def extract(filename: str) -> list[Datapoint]:
         hh_date = format_unknown_date(line[indices["hh_datetime"]])
         ts_frc = try_format(line[indices["ts_frc"]], float)
         hh_frc = try_format(line[indices["hh_frc"]], float)
-        ts_cond = try_format(line[indices["ts_cond"]], int)
+        ts_cond = try_format(line[indices["ts_cond"]], float)
         ts_temp = try_format(line[indices["ts_wattemp"]], float)
 
         datapoint = Datapoint(ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp)
         errors_in_datapoint = get_bad_columns(datapoint)
 
         if errors_in_datapoint:
-            errors.append(
-                {
-                    "row_number": row_number,
-                    "datapoint": datapoint.to_json(),
-                    "bad_columns": errors_in_datapoint,
-                }
-            )
+            err = {
+                "row_number": row_number,
+                "datapoint": datapoint.to_json(),
+                "bad_columns": errors_in_datapoint,
+            }
+            errors.append(err)
         else:
             datapoints.append(datapoint)
 
