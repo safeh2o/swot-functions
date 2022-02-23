@@ -1,7 +1,5 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
-from bson import json_util
-import json
+from datetime import datetime, timedelta, timezone
 
 
 class Datapoint(object):
@@ -122,7 +120,10 @@ def round_time(dt: datetime):
 
 def format_unknown_date(date_string: str):
     try:
-        return round_time(datetime(1900, 1, 1) + timedelta(days=float(date_string)))
+        return round_time(
+            datetime(1900, 1, 1, tzinfo=timezone.utc)
+            + timedelta(days=float(date_string))
+        )
     except ValueError:
         return format_plain_date(date_string)
 
@@ -155,9 +156,10 @@ def try_format(num_string: str, cast_type):
 def get_bad_columns(datapoint: Datapoint):
     TWO_DAYS = 48 * 3600  # two days in seconds
     bad_columns = set()
-    if not datapoint.ts_date or datapoint.ts_date > datetime.now():
+    now = datetime.now(timezone.utc)
+    if not datapoint.ts_date or datapoint.ts_date > now:
         bad_columns.add("ts_date")
-    if not datapoint.hh_date or datapoint.hh_date > datetime.now():
+    if not datapoint.hh_date or datapoint.hh_date > now:
         bad_columns.add("hh_date")
 
     if (
