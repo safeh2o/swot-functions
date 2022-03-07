@@ -129,24 +129,26 @@ def format_unknown_date(date_string: str):
 
 
 def format_plain_date(date_string: str):
+    date_string_len = len(date_string)
     spacer = " "
     if "T" in date_string:
         spacer = "T"
-    if len(date_string) == 16:
+    if date_string_len == 16:
         date_format = f"%Y-%m-%d{spacer}%H:%M"
-    elif len(date_string) == 19:
+    elif date_string_len == 19:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S"
-    elif len(date_string) == 23:
+    elif date_string_len == 23:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f"
-    elif len(date_string) >= 26 and len(date_string) < 29:
+    elif date_string_len >= 26 and date_string_len < 29:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
         date_string = date_string[:26] + ":00"
-    elif len(date_string) == 29:
+    elif date_string_len == 29:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
     else:
         return None
 
-    return datetime.strptime(date_string, date_format)
+    res = datetime.strptime(date_string, date_format).replace(tzinfo=timezone.utc)
+    return res
 
 
 def try_format(num_string: str, cast_type):
