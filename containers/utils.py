@@ -149,10 +149,7 @@ def send_analysis_confirmation_email():
     message.dynamic_template_data = {"resultsUrl": results_url}
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
+        sg.send(message)
     except Exception as e:
         print(e)
 
@@ -168,10 +165,11 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
     )
 
     if is_all_analysis_complete():
+        logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
+        send_analysis_confirmation_email()
+        update_dataset({"isComplete": True})
+
         try:
             remove_container_group()
         except:
             logging.error(f"Error while trying to remove container group {DATASET_ID}")
-        logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
-        send_analysis_confirmation_email()
-        update_dataset({"isComplete": True})
