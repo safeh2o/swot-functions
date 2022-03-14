@@ -103,7 +103,8 @@
           "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
           "WEBURL": "${config:containers.env.WEBURL}",
           "NETWORK_COUNT": "5",
-          "EPOCHS": "100"
+          "EPOCHS": "100",
+          "MAX_DURATION": "3"
         }
       }
     },

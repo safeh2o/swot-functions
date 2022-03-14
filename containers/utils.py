@@ -1,15 +1,16 @@
 import logging
-import socket
-from logging.handlers import SysLogHandler
-import os
-from enum import Enum
-from azure.storage.blob import BlobServiceClient, ContentSettings
-from pymongo import MongoClient
-from bson import ObjectId
 import mimetypes
-from pymongo.collection import Collection
-from azure.mgmt.containerinstance import ContainerInstanceManagementClient
+import os
+import socket
+from enum import Enum
+from logging.handlers import SysLogHandler
+
 from azure.identity import ClientSecretCredential
+from azure.mgmt.containerinstance import ContainerInstanceManagementClient
+from azure.storage.blob import BlobServiceClient, ContentSettings
+from bson import ObjectId
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class Status(Enum):
@@ -45,6 +46,10 @@ SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID = os.getenv(
 )
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 WEBURL = os.getenv("WEBURL")
+DEST_CONTAINER_NAME = os.getenv("DEST_CONTAINER_NAME")
+SRC_CONTAINER_NAME = os.getenv("SRC_CONTAINER_NAME")
+INPUT_FILENAME = os.getenv("BLOB_NAME", "")
+
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
 
 
@@ -62,7 +67,6 @@ def set_logger(prefix) -> logging.Logger:
 
 
 def upload_files(file_paths):
-    DEST_CONTAINER_NAME = os.getenv("DEST_CONTAINER_NAME")
     container_client = blob_service_client.get_container_client(DEST_CONTAINER_NAME)
 
     for out_file in file_paths:
@@ -76,11 +80,8 @@ def upload_files(file_paths):
 
 
 def download_src_blob() -> str:
-    SRC_CONTAINER_NAME = os.getenv("SRC_CONTAINER_NAME")
-    input_filename = os.getenv("BLOB_NAME", "")
-
     blob_client = blob_service_client.get_blob_client(
-        SRC_CONTAINER_NAME, input_filename
+        SRC_CONTAINER_NAME, INPUT_FILENAME
     )
 
     if not blob_client.exists():
@@ -88,10 +89,10 @@ def download_src_blob() -> str:
         return
 
     # download blob and save
-    with open(input_filename, "wb") as downloaded_file:
+    with open(INPUT_FILENAME, "wb") as downloaded_file:
         downloaded_file.write(blob_client.download_blob().readall())
 
-    return input_filename
+    return INPUT_FILENAME
 
 
 def update_dataset(extra_data: dict):
