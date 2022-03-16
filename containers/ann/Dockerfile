@@ -1,14 +1,14 @@
 FROM python:3.8
 
 WORKDIR /app
+RUN ["mkdir", "ann"]
 
-COPY ann/requirements.txt /app
+COPY requirements.txt .
+COPY ann/requirements.txt ./ann
 
-RUN ["pip", "install", "-r", "requirements.txt"]
+RUN ["pip", "install", "-r", "ann/requirements.txt"]
 
-COPY ann/ /app
+COPY . .
 
-COPY utils.py /app
-COPY standalone_html.py /app
-
-ENTRYPOINT ["python", "upload.py"]
+ENV PYTHONPATH="/app"
+CMD ["python", "/app/ann/upload.py"]

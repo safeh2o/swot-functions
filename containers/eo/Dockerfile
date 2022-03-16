@@ -15,19 +15,18 @@ RUN apt update -y && apt install -y \
     zip
 
 ADD https://api.github.com/repos/safeh2o/swot-octave-analysis/git/refs/heads/master version.json
-RUN git clone https://github.com/safeh2o/swot-octave-analysis
+RUN git clone https://github.com/safeh2o/swot-octave-analysis eo/swot-octave-analysis
 
-COPY eo/requirements.txt .
+COPY requirements.txt .
+COPY eo/requirements.txt ./eo
 
-RUN ["pip3", "install", "-r", "requirements.txt"]
+RUN ["pip3", "install", "-r", "eo/requirements.txt"]
 
-RUN mkdir -p output/downloads \
-    output/octave
+RUN mkdir -p eo/output/downloads \
+    eo/output/octave
 
-COPY eo/ /app
+COPY . .
 
-COPY utils.py /app
-
-WORKDIR /app/swot-octave-analysis/EngineeringOptimizationModel
-
-ENTRYPOINT ["python3", "/app/upload.py"]
+WORKDIR /app/eo/swot-octave-analysis/EngineeringOptimizationModel
+ENV PYTHONPATH="/app"
+CMD ["python3", "/app/eo/upload.py"]

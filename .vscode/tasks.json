@@ -37,25 +37,36 @@
       "label": "push fx",
       "type": "shell",
       "command": "docker push ${config:containers.registryName}/swotfx",
-      "dependsOn": ["acr login"]
+      "dependsOn": [
+        "acr login"
+      ]
     },
     {
       "label": "push ann",
       "type": "shell",
       "command": "docker push ${config:containers.registryName}/serverann",
-      "dependsOn": ["acr login"]
+      "dependsOn": [
+        "acr login"
+      ]
     },
     {
       "label": "push eo",
       "type": "shell",
       "command": "docker push ${config:containers.registryName}/servereo",
-      "dependsOn": ["acr login"]
+      "dependsOn": [
+        "acr login"
+      ]
     },
     {
       "label": "build and push",
       "type": "shell",
       "command": "echo Built and pushed containers...",
-      "dependsOn": ["build ann", "build eo", "push ann", "push eo"],
+      "dependsOn": [
+        "build ann",
+        "build eo",
+        "push ann",
+        "push eo"
+      ],
       "dependsOrder": "sequence",
       "problemMatcher": []
     },
@@ -63,7 +74,10 @@
       "label": "cd fx",
       "type": "shell",
       "command": "echo Built and pushed function...",
-      "dependsOn": ["build fx", "push fx"],
+      "dependsOn": [
+        "build fx",
+        "push fx"
+      ],
       "dependsOrder": "sequence",
       "problemMatcher": []
     },
