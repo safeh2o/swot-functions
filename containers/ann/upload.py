@@ -1,9 +1,9 @@
 import os
-from swotann.nnetwork import NNetwork
+import traceback
 
 import utils
 from standalone_html import make_html_images_inline
-import traceback
+from swotann.nnetwork import NNetwork
 
 ANALYSIS_METHOD = utils.AnalysisMethod.ANN
 
@@ -33,13 +33,16 @@ def process_queue():
     # results filename will be the same as the input filename, but that's OK because they'll live in different directories
     results_file = os.path.join(output_dirname, input_filename)
     report_file = results_file.replace(".csv", ".html")
-    ann.run_swot(input_filename, results_file, report_file, storage_target)
+    metadata = ann.run_swot(input_filename, results_file, report_file, storage_target)
+    utils.update_dataset({"ann": metadata})
 
     # make report file standalone (convert all images to base64)
-    report_file_standalone = report_file.replace('.html', '-standalone.html')
+    report_file_standalone = report_file.replace(".html", "-standalone.html")
     make_html_images_inline(report_file, report_file_standalone)
 
-    output_files = [os.path.join(output_dirname, file) for file in os.listdir(output_dirname)]
+    output_files = [
+        os.path.join(output_dirname, file) for file in os.listdir(output_dirname)
+    ]
 
     utils.upload_files(output_files)
 
