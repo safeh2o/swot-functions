@@ -4,3 +4,5 @@ azure-storage-blob
 pymongo
 dnspython
 sendgrid
+numpy
+pandas

@@ -4,6 +4,7 @@ import os
 import socket
 from enum import Enum
 from logging.handlers import SysLogHandler
+from tempfile import NamedTemporaryFile
 
 from azure.identity import ClientSecretCredential
 from azure.mgmt.containerinstance import ContainerInstanceManagementClient
@@ -11,6 +12,8 @@ from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.collection import Collection
+
+from postprocessing import postprocess
 
 
 class Status(Enum):
@@ -51,6 +54,8 @@ SRC_CONTAINER_NAME = os.getenv("SRC_CONTAINER_NAME")
 INPUT_FILENAME = os.getenv("BLOB_NAME", "")
 
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
+blob_result_client = blob_service_client.get_container_client(DEST_CONTAINER_NAME)
+blob_input_client = blob_service_client.get_container_client(SRC_CONTAINER_NAME)
 
 
 def set_logger(prefix) -> logging.Logger:
@@ -165,6 +170,36 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
     )
 
     if is_all_analysis_complete():
+        dataset = get_dataset()
+        frc_target = dataset["eo"]["reco"]
+        case_blobpaths = []
+        for case in ["worst", "average"]:
+            for timing in ["am", "pm"]:
+                case_blobpaths.append(
+                    f"{DATASET_ID}/{DATASET_ID}_{case}_case_{timing}.csv"
+                )
+        case_filepaths = []
+        for case_blob in case_blobpaths:
+            fp = NamedTemporaryFile(suffix=".csv", delete=False)
+            fp.write(
+                blob_result_client.get_blob_client(case_blob).download_blob().readall()
+            )
+            fp.flush()
+            case_filepaths.append(fp.name)
+
+        input_filepath = download_src_blob()
+
+        range_and_safety = postprocess(
+            frc_target=frc_target,
+            case_filepaths=case_filepaths,
+            input_file=input_filepath,
+        )
+        update_dataset(
+            {
+                "risk_range": range_and_safety["risk_range"],
+                "safe_percent": range_and_safety["safe_percent"],
+            }
+        )
         logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
         send_analysis_confirmation_email()
         update_dataset({"isComplete": True})
