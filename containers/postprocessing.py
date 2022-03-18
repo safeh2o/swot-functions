@@ -11,18 +11,18 @@ def get_current_safety(input_df):
 
 
 def get_risk(frc_target, ann_frames):
-    """This function gets the risk range (Labelled 3 on the marked up dash). The output is a two value range showing the
-    minimum and maximum predicted risk of unsafe drinking water for the four scenarios. On the dashboard this should
+    """This function gets the safety range (Labelled 3 on the marked up dash). The output is a two value range showing the
+    minimum and maximum predicted safety of unsafe drinking water for the four scenarios. On the dashboard this should
     print as:
-    str(risk_range[0])+"-"+str(risk_range[1])
+    str(safety_range[0])+"-"+str(safety_range[1])
     """
     FRC_targets = np.arange(0.2, 2.05, 0.05)
     target_check_arg = np.argmin(np.abs(frc_target - FRC_targets))
     risks = []
     for df in ann_frames:
         risks.append(df["probability<=0.20"].loc[target_check_arg])
-    risk_range = [(1 - np.min(risks)) * 100, (1 - np.max(risks)) * 100]
-    return risk_range
+    safety_range = [np.min(risks) * 100, np.max(risks) * 100]
+    return safety_range
 
 
 def postprocess(frc_target, case_filepaths, input_file):
@@ -30,7 +30,7 @@ def postprocess(frc_target, case_filepaths, input_file):
     for f in case_filepaths:
         ann_frames.append(pd.read_csv(f))
     input_df = pd.read_csv(input_file)
-    risk_range = get_risk(frc_target, ann_frames)
+    safety_range = get_risk(frc_target, ann_frames)
     safe_percent = get_current_safety(input_df)
 
-    return {"risk_range": risk_range, "safe_percent": safe_percent}
+    return {"safety_range": safety_range, "safe_percent": safe_percent}

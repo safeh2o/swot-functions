@@ -189,15 +189,15 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
 
         input_filepath = download_src_blob()
 
-        range_and_safety = postprocess(
+        water_safety = postprocess(
             frc_target=frc_target,
             case_filepaths=case_filepaths,
             input_file=input_filepath,
         )
         update_dataset(
             {
-                "risk_range": range_and_safety["risk_range"],
-                "safe_percent": range_and_safety["safe_percent"],
+                "safety_range": water_safety["safety_range"],
+                "safe_percent": water_safety["safe_percent"],
             }
         )
         logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
