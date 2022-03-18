@@ -180,7 +180,7 @@ def get_bad_columns(datapoint: Datapoint):
 
     if datapoint.ts_frc == None or datapoint.ts_frc <= 0:
         bad_columns.add("ts_frc")
-    if datapoint.hh_frc == None or datapoint.hh_frc <= 0:
+    if datapoint.hh_frc == None or datapoint.hh_frc < 0:
         bad_columns.add("hh_frc")
 
     if (
