@@ -108,6 +108,7 @@ class Datapoint(object):
             hh_frc=document["hhFrc"],
             ts_cond=document["tsCond"],
             ts_temp=document["tsTemp"],
+            timezone_offset=document["timezoneOffset"],
         )
 
     def get_csv_lines(datapoints: list[Datapoint]) -> list[str]:
@@ -116,6 +117,18 @@ class Datapoint(object):
         for datapoint in datapoints:
             lines.append(str(datapoint))
         return lines
+
+    def add_timezones(datapoints: list[Datapoint]) -> list[Datapoint]:
+        for datapoint in datapoints:
+            timezone_offset = datapoint.timezone_offset
+            if timezone_offset:
+                tzinfo = timezone(offset=timedelta(seconds=timezone_offset))
+                datapoint.ts_date = datapoint.ts_date.replace(
+                    tzinfo=timezone.utc
+                ).astimezone(tzinfo)
+                datapoint.hh_date = datapoint.hh_date.replace(
+                    tzinfo=timezone.utc
+                ).astimezone(tzinfo)
 
 
 def round_time(dt: datetime):

@@ -135,6 +135,7 @@ def main(
             }
         },
     )
+    Datapoint.add_timezones(resolved_datapoints)
     lines = Datapoint.get_csv_lines(resolved_datapoints)
 
     output.set("\n".join(lines))
