@@ -29,6 +29,7 @@ class Datapoint(object):
         hh_frc: float,
         ts_cond: int,
         ts_temp: int,
+        timezone_offset: int,
     ) -> Datapoint:
         self.ts_date = ts_date
         self.hh_date = hh_date
@@ -36,6 +37,7 @@ class Datapoint(object):
         self.hh_frc = hh_frc
         self.ts_cond = ts_cond
         self.ts_temp = ts_temp
+        self.timezone_offset = timezone_offset
 
     def to_document(self, **kwargs) -> dict:
         return {
@@ -45,6 +47,7 @@ class Datapoint(object):
             "tsTemp": self.ts_temp,
             "hhDate": self.hh_date,
             "hhFrc": self.hh_frc,
+            "timezoneOffset": self.timezone_offset,
             **kwargs,
         }
 
@@ -66,6 +69,7 @@ class Datapoint(object):
             "hhFrc": self.hh_frc,
             "tsCond": self.ts_cond,
             "tsTemp": self.ts_temp,
+            "timezoneOffset": self.timezone_offset,
         }
 
     def to_csv_line(self) -> str:
@@ -147,8 +151,18 @@ def format_plain_date(date_string: str):
     else:
         return None
 
-    res = datetime.strptime(date_string, date_format).replace(tzinfo=timezone.utc)
+    raw_date = datetime.strptime(date_string, date_format)
+    if not raw_date.tzinfo:
+        res = raw_date.replace(tzinfo=timezone.utc)
+    else:
+        res = raw_date
     return res
+
+
+def get_timezone_offset(ts_date: datetime, hh_date: datetime) -> int:
+    if ts_date.tzinfo != hh_date.tzinfo:
+        return None
+    return ts_date.utcoffset().total_seconds()
 
 
 def try_format(num_string: str, cast_type):
@@ -190,10 +204,13 @@ def get_bad_columns(datapoint: Datapoint):
     ):
         bad_columns.update({"ts_frc", "hh_frc"})
 
+    if not datapoint.timezone_offset:
+        bad_columns.update({"ts_date", "hh_date"})
+
     return list(bad_columns)
 
 
-def extract(filename: str) -> list[Datapoint]:
+def extract(filename: str) -> tuple[list[Datapoint], list]:
     datapoints = []
     errors = []
 
@@ -219,8 +236,11 @@ def extract(filename: str) -> list[Datapoint]:
         hh_frc = try_format(line[indices["hh_frc"]], float)
         ts_cond = try_format(line[indices["ts_cond"]], float)
         ts_temp = try_format(line[indices["ts_wattemp"]], float)
+        timezone_offset = get_timezone_offset(ts_date, hh_date)
 
-        datapoint = Datapoint(ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp)
+        datapoint = Datapoint(
+            ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp, timezone_offset
+        )
         errors_in_datapoint = get_bad_columns(datapoint)
 
         if errors_in_datapoint:
