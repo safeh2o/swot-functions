@@ -173,7 +173,7 @@ def format_plain_date(date_string: str):
 
 
 def get_timezone_offset(ts_date: datetime, hh_date: datetime) -> int:
-    if ts_date.tzinfo != hh_date.tzinfo:
+    if not ts_date or not hh_date or ts_date.tzinfo != hh_date.tzinfo:
         return None
     return ts_date.utcoffset().total_seconds()
 

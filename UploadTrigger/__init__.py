@@ -109,7 +109,7 @@ def main(msg: func.QueueMessage) -> None:
             # convert xlsx to csv and write to fp
             convert_xlsx_blob_to_csv(bc, fp)
         elif ext == "csv":
-            fp.write(bc.download_blob().content_as_text())
+            fp.write(bc.download_blob().content_as_text(encoding="utf-8-sig"))
             fp.flush()
         else:
             raise TypeError(f"Invalid file extension {ext}")
