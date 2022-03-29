@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone
+import re
 
 
 class Datapoint(object):
@@ -217,7 +218,7 @@ def get_bad_columns(datapoint: Datapoint):
     ):
         bad_columns.update({"ts_frc", "hh_frc"})
 
-    if not datapoint.timezone_offset:
+    if datapoint.timezone_offset == None:
         bad_columns.update({"ts_date", "hh_date"})
 
     return list(bad_columns)
@@ -238,7 +239,7 @@ def extract(filename: str) -> tuple[list[Datapoint], list]:
     for row_number, l in enumerate(file, 2):
         # Skip over lines without six elements and empty lines
         l = l.rstrip("\n")
-        if not l:
+        if not l or re.match("^,*$", l):
             continue
 
         line = l.strip().split(",")
