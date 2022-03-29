@@ -134,3 +134,4 @@ dist/
 node_modules/
 .vscode/settings.json
 **/__pycache__/
+.DS_Store
