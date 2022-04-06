@@ -190,8 +190,10 @@ def get_bad_columns(datapoint: Datapoint):
     TWO_DAYS = 48 * 3600  # two days in seconds
     bad_columns = set()
     now = datetime.now(timezone.utc)
+    # if ts date is null or in the future
     if not datapoint.ts_date or datapoint.ts_date > now:
         bad_columns.add("ts_date")
+    # if hh date is null or in the future
     if not datapoint.hh_date or datapoint.hh_date > now:
         bad_columns.add("hh_date")
 
@@ -206,11 +208,14 @@ def get_bad_columns(datapoint: Datapoint):
     ):
         bad_columns.update({"ts_date", "hh_date"})  # highlight both ts and hh dates
 
+    # if ts frc is null
     if datapoint.ts_frc == None or datapoint.ts_frc <= 0:
         bad_columns.add("ts_frc")
+    # if hh frc is null
     if datapoint.hh_frc == None or datapoint.hh_frc < 0:
         bad_columns.add("hh_frc")
 
+    # if hh frc is 0.06 greater than ts frc
     if (
         datapoint.hh_frc
         and datapoint.ts_frc
@@ -218,6 +223,7 @@ def get_bad_columns(datapoint: Datapoint):
     ):
         bad_columns.update({"ts_frc", "hh_frc"})
 
+    # if there is no timezone offset found or inferred
     if datapoint.timezone_offset == None:
         bad_columns.update({"ts_date", "hh_date"})
 
