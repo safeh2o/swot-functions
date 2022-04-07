@@ -79,7 +79,7 @@ class Datapoint(object):
             val = getattr(self, column)
             if isinstance(val, datetime):
                 val = val.isoformat()
-            elif not val:
+            elif val == None:
                 val = ""
             values.append(str(val))
 
@@ -211,7 +211,7 @@ def get_bad_columns(datapoint: Datapoint):
     # if ts frc is null
     if datapoint.ts_frc == None or datapoint.ts_frc <= 0:
         bad_columns.add("ts_frc")
-    # if hh frc is null
+    # if hh frc is null or negative
     if datapoint.hh_frc == None or datapoint.hh_frc < 0:
         bad_columns.add("hh_frc")
 
