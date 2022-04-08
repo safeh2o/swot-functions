@@ -133,12 +133,17 @@ def get_dataset():
 
 
 def remove_container_group():
-    sp = ClientSecretCredential(
-        client_id=CLIENT_ID, client_secret=CLIENT_SECRET, tenant_id=TENANT_ID
-    )
-    ci_client = ContainerInstanceManagementClient(sp, subscription_id=SUBSCRIPTION_ID)
-    logging.info(f"Deleting container group {DATASET_ID}")
-    ci_client.container_groups.begin_delete(RG_NAME, DATASET_ID)
+    try:
+        sp = ClientSecretCredential(
+            client_id=CLIENT_ID, client_secret=CLIENT_SECRET, tenant_id=TENANT_ID
+        )
+        ci_client = ContainerInstanceManagementClient(
+            sp, subscription_id=SUBSCRIPTION_ID
+        )
+        logging.info(f"Deleting container group {DATASET_ID}")
+        ci_client.container_groups.begin_delete(RG_NAME, DATASET_ID)
+    except:
+        logging.error(f"Error while trying to remove container group {DATASET_ID}")
 
 
 def send_analysis_confirmation_email():
@@ -170,41 +175,41 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
     )
 
     if is_all_analysis_complete():
-        dataset = get_dataset()
-        frc_target = dataset["eo"]["reco"]
-        case_blobpaths = []
-        for case in ["worst", "average"]:
-            for timing in ["am", "pm"]:
-                case_blobpaths.append(
-                    f"{DATASET_ID}/{DATASET_ID}_{case}_case_{timing}.csv"
-                )
-        case_filepaths = []
-        for case_blob in case_blobpaths:
-            fp = NamedTemporaryFile(suffix=".csv", delete=False)
-            fp.write(
-                blob_result_client.get_blob_client(case_blob).download_blob().readall()
-            )
-            fp.flush()
-            case_filepaths.append(fp.name)
-
-        input_filepath = download_src_blob()
-
-        water_safety = postprocess(
-            frc_target=frc_target,
-            case_filepaths=case_filepaths,
-            input_file=input_filepath,
-        )
-        update_dataset(
-            {
-                "safety_range": water_safety["safety_range"],
-                "safe_percent": water_safety["safe_percent"],
-            }
-        )
-        logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
-        send_analysis_confirmation_email()
-        update_dataset({"isComplete": True})
-
         try:
+            dataset = get_dataset()
+            frc_target = dataset["eo"]["reco"]
+            case_blobpaths = []
+            for case in ["worst", "average"]:
+                for timing in ["am", "pm"]:
+                    case_blobpaths.append(
+                        f"{DATASET_ID}/{DATASET_ID}_{case}_case_{timing}.csv"
+                    )
+            case_filepaths = []
+            for case_blob in case_blobpaths:
+                fp = NamedTemporaryFile(suffix=".csv", delete=False)
+                fp.write(
+                    blob_result_client.get_blob_client(case_blob)
+                    .download_blob()
+                    .readall()
+                )
+                fp.flush()
+                case_filepaths.append(fp.name)
+
+            input_filepath = download_src_blob()
+
+            water_safety = postprocess(
+                frc_target=frc_target,
+                case_filepaths=case_filepaths,
+                input_file=input_filepath,
+            )
+            update_dataset(
+                {
+                    "safety_range": water_safety["safety_range"],
+                    "safe_percent": water_safety["safe_percent"],
+                }
+            )
+            logging.info(f"Sending analysis completion email for dataset {DATASET_ID}")
+            send_analysis_confirmation_email()
+            update_dataset({"isComplete": True})
+        finally:
             remove_container_group()
-        except:
-            logging.error(f"Error while trying to remove container group {DATASET_ID}")
