@@ -7,8 +7,6 @@ from swotann.nnetwork import NNetwork
 
 ANALYSIS_METHOD = utils.AnalysisMethod.ANN
 
-utils.set_logger(ANALYSIS_METHOD)
-
 
 def process_queue():
     input_filename = utils.download_src_blob()
@@ -16,6 +14,7 @@ def process_queue():
     network_count = os.getenv("NETWORK_COUNT", None)
     epochs = os.getenv("EPOCHS", None)
     dataset_id = os.getenv("DATASET_ID", None)
+    utils.set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 
     output_dirname = dataset_id
     os.mkdir(output_dirname)

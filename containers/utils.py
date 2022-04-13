@@ -53,12 +53,14 @@ DEST_CONTAINER_NAME = os.getenv("DEST_CONTAINER_NAME")
 SRC_CONTAINER_NAME = os.getenv("SRC_CONTAINER_NAME")
 INPUT_FILENAME = os.getenv("BLOB_NAME", "")
 
-blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
-blob_result_client = blob_service_client.get_container_client(DEST_CONTAINER_NAME)
-blob_input_client = blob_service_client.get_container_client(SRC_CONTAINER_NAME)
+if AZURE_STORAGE_KEY:
+    blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
+    blob_result_client = blob_service_client.get_container_client(DEST_CONTAINER_NAME)
+    blob_input_client = blob_service_client.get_container_client(SRC_CONTAINER_NAME)
 
 
-def set_logger(prefix) -> logging.Logger:
+def set_logger(prefix="") -> logging.Logger:
+    purge_papertrail_loggers()
     syslog = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
     syslog.addFilter(ContextFilter())
     format = f"%(asctime)s %(hostname)s {prefix}: %(message)s"
@@ -69,6 +71,13 @@ def set_logger(prefix) -> logging.Logger:
     logger.setLevel(logging.INFO)
 
     return logger
+
+
+def purge_papertrail_loggers():
+    logger = logging.getLogger()
+    for h in logger.handlers:
+        if isinstance(h, SysLogHandler) and "papertrail" in h.address:
+            logger.removeHandler(h)
 
 
 def upload_files(file_paths):
@@ -161,7 +170,7 @@ def send_analysis_confirmation_email():
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         sg.send(message)
     except Exception as e:
-        print(e)
+        logging.error(e)
 
 
 def update_status(analysis_method: AnalysisMethod, success: bool, message: str):

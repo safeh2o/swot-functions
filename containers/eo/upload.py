@@ -4,14 +4,13 @@ import traceback
 
 ANALYSIS_METHOD = utils.AnalysisMethod.EO
 
-utils.set_logger(ANALYSIS_METHOD)
-
 
 def process_queue():
     input_filename = utils.download_src_blob()
     confidence_level = os.getenv("CONFIDENCE_LEVEL", "optimumDecay")
     max_duration = os.getenv("MAX_DURATION", 3)
     dataset_id = os.getenv("DATASET_ID", None)
+    utils.set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 
     # run swot analysis on downloaded blob
     out_dir = dataset_id

@@ -1,27 +1,25 @@
-import azure.functions as func
+import logging
+import os
 
+import azure.functions as func
+import certifi
+from azure.identity import ClientSecretCredential
 from azure.mgmt.containerinstance import ContainerInstanceManagementClient
-from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from azure.mgmt.containerinstance.models import (
-    ResourceRequests,
     Container,
     ContainerGroup,
-    ResourceRequirements,
-    OperatingSystemTypes,
-    ImageRegistryCredential,
     ContainerGroupRestartPolicy,
     EnvironmentVariable,
+    ImageRegistryCredential,
+    OperatingSystemTypes,
+    ResourceRequests,
+    ResourceRequirements,
 )
-from azure.identity import ClientSecretCredential
-import os
-from utils.standardize import Datapoint
-from pymongo import MongoClient
+from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from bson import ObjectId
-import certifi
-
-import logging
-import socket
-from logging.handlers import SysLogHandler
+from pymongo import MongoClient
+from utils.logging import set_logger
+from utils.standardize import Datapoint
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
 PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
@@ -45,24 +43,6 @@ CONTAINER_NAMES = "serverann,servereo"
 
 if not WEBURL.startswith("http"):
     WEBURL = f"https://{WEBURL}"
-
-
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
-
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
-
-
-syslog = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
-syslog.addFilter(ContextFilter())
-format = "%(asctime)s %(hostname)s SWOT-FUNCTIONS-ANALYSIS: %(message)s"
-formatter = logging.Formatter(format, datefmt="%b %d %H:%M:%S")
-syslog.setFormatter(formatter)
-logger = logging.getLogger()
-logger.addHandler(syslog)
-logger.setLevel(logging.INFO)
 
 
 def datapoint_eq(datapoint1, datapoint2):
@@ -93,6 +73,7 @@ def main(
     msg: func.QueueMessage,
     output: func.Out[bytes],
 ) -> None:
+    set_logger("SWOT-FUNCTIONS-ANALYSIS")
 
     logging.info(
         "Python queue trigger function processed a queue item: %s",
@@ -172,6 +153,8 @@ def main(
         "SENDGRID_API_KEY": SENDGRID_API_KEY,
         "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
         "WEBURL": WEBURL,
+        "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
+        "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
     }
 
     create_container_group(
@@ -223,7 +206,7 @@ def create_container_group(
                     -- The container image name and tag, for example:
                        microsoft\ci-helloworld:latest
     """
-    print("Creating container group '{0}'...".format(container_group_name))
+    logging.info("Creating container group '{0}'...".format(container_group_name))
 
     # Configure the container
 

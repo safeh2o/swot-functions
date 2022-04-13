@@ -1,43 +1,22 @@
-from io import TextIOWrapper
+import csv
 import logging
+import os
+import tempfile
+from io import TextIOWrapper
+from uuid import uuid4
 
 import azure.functions as func
-from pymongo import MongoClient
-import os
-from bson.objectid import ObjectId
-from utils.standardize import extract
-from utils.mailing import send_mail
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-from uuid import uuid4
 import certifi
-import tempfile
-
-import logging
-import socket
-from logging.handlers import SysLogHandler
-
-import openpyxl, csv
+import openpyxl
+from azure.storage.blob import BlobClient, ContainerClient
+from bson.objectid import ObjectId
+from pymongo import MongoClient
+from utils.logging import set_logger
+from utils.mailing import send_mail
+from utils.standardize import extract
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
 PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
-
-
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
-
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
-
-
-syslog = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
-syslog.addFilter(ContextFilter())
-format = "%(asctime)s %(hostname)s SWOT-FUNCTIONS-UPLOAD: %(message)s"
-formatter = logging.Formatter(format, datefmt="%b %d %H:%M:%S")
-syslog.setFormatter(formatter)
-logger = logging.getLogger()
-logger.addHandler(syslog)
-logger.setLevel(logging.INFO)
 
 
 def generate_random_filename(extension="csv"):
@@ -65,6 +44,8 @@ def convert_xlsx_blob_to_csv(blob_client: BlobClient, fp: TextIOWrapper):
 
 
 def main(msg: func.QueueMessage) -> None:
+    set_logger("SWOT-FUNCTIONS-UPLOAD")
+
     ca = certifi.where()
     msg_json = msg.get_json()
     upload_id = msg_json["uploadId"]

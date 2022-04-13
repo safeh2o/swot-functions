@@ -1,3 +1,4 @@
+import logging
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -12,8 +13,6 @@ def send_mail(email, errors):
     try:
         sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
         response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
-    except Exception as e:
-        print(e)
+        logging.info(f"sent upload confirmation email to {email}")
+    except Exception as err:
+        logging.error(err)
