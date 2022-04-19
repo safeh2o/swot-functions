@@ -1,7 +1,11 @@
-import os, glob, subprocess, json
-import containerutils
-import traceback
+import glob
+import json
 import logging
+import os
+import subprocess
+import traceback
+
+import containerutils
 from utils.logging import set_logger
 
 ANALYSIS_METHOD = containerutils.AnalysisMethod.EO

@@ -1,10 +1,11 @@
+import logging
 import os
 import traceback
 
 import containerutils
-from utils.logging import set_logger
 from standalone_html import make_html_images_inline
 from swotann.nnetwork import NNetwork
+from utils.logging import set_logger
 
 ANALYSIS_METHOD = containerutils.AnalysisMethod.ANN
 
@@ -57,5 +58,6 @@ if __name__ == "__main__":
             traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)
         )
         success = False
+        logging.error(message)
     finally:
         containerutils.update_status(ANALYSIS_METHOD, success, message)
