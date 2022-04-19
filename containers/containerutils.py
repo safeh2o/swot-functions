@@ -3,8 +3,8 @@ import mimetypes
 import os
 import socket
 from enum import Enum
-from logging.handlers import SysLogHandler
 from tempfile import NamedTemporaryFile
+from datetime import datetime
 
 from azure.identity import ClientSecretCredential
 from azure.mgmt.containerinstance import ContainerInstanceManagementClient
@@ -57,36 +57,6 @@ if AZURE_STORAGE_KEY:
     blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_KEY)
     blob_result_client = blob_service_client.get_container_client(DEST_CONTAINER_NAME)
     blob_input_client = blob_service_client.get_container_client(SRC_CONTAINER_NAME)
-
-
-def set_logger(prefix="") -> logging.Logger:
-    logger = logging.getLogger()
-    first_handler = logger.handlers[0]
-    if not is_papertrail_handler(first_handler):
-        first_handler.setLevel(logging.WARNING)
-    purge_papertrail_handlers()
-    syslog = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
-    syslog.addFilter(ContextFilter())
-    format = f"%(asctime)s %(hostname)s {prefix}: %(message)s"
-    formatter = logging.Formatter(format, datefmt="%b %d %H:%M:%S")
-    syslog.setFormatter(formatter)
-    logger.addHandler(syslog)
-    logger.setLevel(logging.INFO)
-
-    return logger
-
-
-def purge_papertrail_handlers():
-    logger = logging.getLogger()
-    for h in logger.handlers:
-        if is_papertrail_handler(h):
-            logger.removeHandler(h)
-
-
-def is_papertrail_handler(handler):
-    return isinstance(handler, SysLogHandler) and (
-        "papertrail" in handler.address or "papertrail" in handler.address[0]
-    )
 
 
 def upload_files(file_paths):
@@ -188,6 +158,7 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
             f"status.{analysis_method.value}": {
                 "success": success,
                 "message": message,
+                "last_updated": datetime.now(),
             }
         }
     )

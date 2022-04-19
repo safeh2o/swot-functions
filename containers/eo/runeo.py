@@ -1,16 +1,18 @@
 import os, glob, subprocess, json
-import utils
+import containerutils
 import traceback
+import logging
+from utils.logging import set_logger
 
-ANALYSIS_METHOD = utils.AnalysisMethod.EO
+ANALYSIS_METHOD = containerutils.AnalysisMethod.EO
 
 
 def process_queue():
-    input_filename = utils.download_src_blob()
+    input_filename = containerutils.download_src_blob()
     confidence_level = os.getenv("CONFIDENCE_LEVEL", "optimumDecay")
     max_duration = os.getenv("MAX_DURATION", 3)
     dataset_id = os.getenv("DATASET_ID", None)
-    utils.set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
+    set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 
     # run swot analysis on downloaded blob
     out_dir = dataset_id
@@ -35,19 +37,20 @@ def process_queue():
         with open(json_file, "r") as json_fp:
             result_dict.update(json.load(json_fp))
 
-    utils.update_dataset({"eo": result_dict})
-    utils.upload_files(output_files)
+    containerutils.update_dataset({"eo": result_dict})
+    containerutils.upload_files(output_files)
 
 
 if __name__ == "__main__":
     try:
-        process_queue()
         message = "OK"
         success = True
+        process_queue()
     except Exception as ex:
         message = "".join(
             traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)
         )
+        logging.error(message)
         success = False
     finally:
-        utils.update_status(ANALYSIS_METHOD, success, message)
+        containerutils.update_status(ANALYSIS_METHOD, success, message)

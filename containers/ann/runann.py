@@ -1,20 +1,21 @@
 import os
 import traceback
 
-import utils
+import containerutils
+from utils.logging import set_logger
 from standalone_html import make_html_images_inline
 from swotann.nnetwork import NNetwork
 
-ANALYSIS_METHOD = utils.AnalysisMethod.ANN
+ANALYSIS_METHOD = containerutils.AnalysisMethod.ANN
 
 
 def process_queue():
-    input_filename = utils.download_src_blob()
+    input_filename = containerutils.download_src_blob()
     storage_target = os.getenv("MAX_DURATION", 3)
     network_count = os.getenv("NETWORK_COUNT", None)
     epochs = os.getenv("EPOCHS", None)
     dataset_id = os.getenv("DATASET_ID", None)
-    utils.set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
+    set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 
     output_dirname = dataset_id
     os.mkdir(output_dirname)
@@ -33,7 +34,7 @@ def process_queue():
     results_file = os.path.join(output_dirname, input_filename)
     report_file = results_file.replace(".csv", ".html")
     metadata = ann.run_swot(input_filename, results_file, report_file, storage_target)
-    utils.update_dataset({"ann": metadata})
+    containerutils.update_dataset({"ann": metadata})
 
     # make report file standalone (convert all images to base64)
     report_file_standalone = report_file.replace(".html", "-standalone.html")
@@ -43,7 +44,7 @@ def process_queue():
         os.path.join(output_dirname, file) for file in os.listdir(output_dirname)
     ]
 
-    utils.upload_files(output_files)
+    containerutils.upload_files(output_files)
 
 
 if __name__ == "__main__":
@@ -57,4 +58,4 @@ if __name__ == "__main__":
         )
         success = False
     finally:
-        utils.update_status(ANALYSIS_METHOD, success, message)
+        containerutils.update_status(ANALYSIS_METHOD, success, message)

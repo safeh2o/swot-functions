@@ -5,7 +5,7 @@
       "label": "build eo",
       "type": "docker-build",
       "dockerBuild": {
-        "context": "${workspaceFolder}/containers",
+        "context": "${workspaceFolder}",
         "dockerfile": "${workspaceFolder}/containers/eo/Dockerfile",
         "tag": "${config:containers.registryName}/servereo:latest"
       }
@@ -14,7 +14,7 @@
       "label": "build ann",
       "type": "docker-build",
       "dockerBuild": {
-        "context": "${workspaceFolder}/containers",
+        "context": "${workspaceFolder}",
         "dockerfile": "${workspaceFolder}/containers/ann/Dockerfile",
         "tag": "${config:containers.registryName}/serverann:latest"
       }
@@ -96,8 +96,10 @@
           "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
           "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
           "WEBURL": "${config:containers.env.WEBURL}",
+          "PAPERTRAIL_ADDRESS": "${config:containers.env.PAPERTRAIL_ADDRESS}",
+          "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
           "CONFIDENCE_LEVEL": "minDecay",
-          "MAX_DURATION": "3"
+          "MAX_DURATION": "3",
         }
       }
     },
@@ -116,9 +118,11 @@
           "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
           "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
           "WEBURL": "${config:containers.env.WEBURL}",
+          "PAPERTRAIL_ADDRESS": "${config:containers.env.PAPERTRAIL_ADDRESS}",
+          "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
           "NETWORK_COUNT": "5",
           "EPOCHS": "100",
-          "MAX_DURATION": "3"
+          "MAX_DURATION": "3",
         }
       }
     },
