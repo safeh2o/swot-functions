@@ -1,6 +1,7 @@
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+
 import re
+from datetime import datetime, timedelta, timezone
 
 
 class Datapoint(object):
@@ -157,6 +158,8 @@ def format_plain_date(date_string: str):
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S"
     elif date_string_len == 23:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f"
+    elif date_string_len == 25:
+        date_format = f"%Y-%m-%d{spacer}%H:%M:%S%z"
     elif date_string_len >= 26 and date_string_len < 29:
         date_format = f"%Y-%m-%d{spacer}%H:%M:%S.%f%z"
         date_string = date_string[:26] + ":00"
