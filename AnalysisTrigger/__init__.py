@@ -14,6 +14,7 @@ from azure.mgmt.containerinstance.models import (
     OperatingSystemTypes,
     ResourceRequests,
     ResourceRequirements,
+    GpuResource,
 )
 from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from bson import ObjectId
@@ -39,7 +40,8 @@ SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID = os.getenv(
     "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"
 )
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
-CONTAINER_NAMES = "serverann,servereo"
+ANN_CONTAINER_NAME = "serverann"
+EO_CONTAINER_NAME = "servereo"
 
 if not WEBURL.startswith("http"):
     WEBURL = f"https://{WEBURL}"
@@ -161,10 +163,6 @@ def main(
         ci_client,
         resource_group,
         dataset_id,
-        [
-            f"{REGISTRY_NAME}.azurecr.io/{container_name}:latest"
-            for container_name in CONTAINER_NAMES.split(",")
-        ],
         registry_credentials,
         env_dict,
     )
@@ -189,11 +187,10 @@ def create_container_group(
     ci_client,
     resource_group,
     container_group_name,
-    container_image_names,
     registry_credentials,
     env_dict={},
 ):
-    """Creates a container group with a single container.
+    """Creates a container group with a multiple containers.
 
     Arguments:
         ci_client {azure.mgmt.containerinstance.ContainerInstanceManagementClient}
@@ -214,24 +211,32 @@ def create_container_group(
         EnvironmentVariable(name=key, value=value) for (key, value) in env_dict.items()
     ]
 
-    container_resource_requests = ResourceRequests(memory_in_gb=1.5, cpu=1.0)
-    container_resource_requirements = ResourceRequirements(
-        requests=container_resource_requests
+    # gpu_resource = GpuResource(count=1, sku="K80")
+    ann_container_resource_requests = ResourceRequests(memory_in_gb=3, cpu=2.0)
+    ann_container_resource_requirements = ResourceRequirements(
+        requests=ann_container_resource_requests
     )
-    containers = []
-    for container_image_name in container_image_names:
-        container = Container(
-            name=resolve_base_name(container_image_name),
-            image=container_image_name,
-            resources=container_resource_requirements,
-            environment_variables=base_env,
-        )
-        containers.append(container)
 
+    eo_container_resource_requests = ResourceRequests(memory_in_gb=1.5, cpu=1.0)
+    eo_container_resource_requirements = ResourceRequirements(
+        requests=eo_container_resource_requests
+    )
+    ann_container = Container(
+        name=ANN_CONTAINER_NAME,
+        image=f"{REGISTRY_NAME}.azurecr.io/{ANN_CONTAINER_NAME}:latest",
+        resources=ann_container_resource_requirements,
+        environment_variables=base_env,
+    )
+    eo_container = Container(
+        name=EO_CONTAINER_NAME,
+        image=f"{REGISTRY_NAME}.azurecr.io/{EO_CONTAINER_NAME}:latest",
+        resources=eo_container_resource_requirements,
+        environment_variables=base_env,
+    )
     # Configure the container group
     group = ContainerGroup(
         location=resource_group["location"],
-        containers=containers,
+        containers=[ann_container, eo_container],
         os_type=OperatingSystemTypes.linux,
         image_registry_credentials=[registry_credentials],
         restart_policy=ContainerGroupRestartPolicy.NEVER,
