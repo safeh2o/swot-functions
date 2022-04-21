@@ -18,8 +18,6 @@ PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
 
 def set_logger(prefix="") -> logging.Logger:
     logger = logging.getLogger()
-    if len(logger.handlers) > 0 and not is_papertrail_handler(logger.handlers[0]):
-        logger.handlers[0].setLevel(logging.WARNING)
     purge_papertrail_handlers()
     syslog = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
     syslog.addFilter(ContextFilter())
