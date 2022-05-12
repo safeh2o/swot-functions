@@ -157,9 +157,9 @@ def update_status(analysis_method: AnalysisMethod, success: bool, message: str):
         {
             f"status.{analysis_method.value}": {
                 "success": success,
-                "message": message,
                 "last_updated": datetime.now(),
-            }
+            },
+            f"{analysis_method.value}_message": message
         }
     )
 
