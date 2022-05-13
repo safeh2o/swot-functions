@@ -13,10 +13,16 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient
 from utils.logging import set_logger
 from utils.mailing import send_mail
-from utils.standardize import extract
+from utils.standardize import UploadedFileSummary, extract
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
 PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
+
+
+class ModelNotFound(Exception):
+    def __init__(self, model_id, model_name):
+        message = f"entity id {model_id} not found in {model_name}"
+        super().__init__(message)
 
 
 def generate_random_filename(extension="csv"):
@@ -62,6 +68,8 @@ def main(msg: func.QueueMessage) -> None:
     db = MongoClient(MONGODB_CONNECTION_STRING, tlsCAFile=ca).get_database()
     col = db.get_collection(COLLECTION_NAME)
     upl = col.find_one({"_id": ObjectId(upload_id)})
+    if not upl:
+        raise ModelNotFound(upload_id, COLLECTION_NAME)
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "processing"}})
 
     is_overwriting = upl["overwriting"]
@@ -72,7 +80,7 @@ def main(msg: func.QueueMessage) -> None:
     )
 
     blobs = blob_cc.list_blobs(name_starts_with=upload_id)
-    errors = []
+    uploaded_file_summaries: list[UploadedFileSummary] = []
 
     for blob in blobs:
         # generate temp file
@@ -98,11 +106,9 @@ def main(msg: func.QueueMessage) -> None:
         fp.close()
         datapoint_collection = db.get_collection("datapoints")
         datapoints, errors_in_file = extract(tmpname)
-        if errors_in_file:
-            filename_as_uploaded = "_".join(blob.name.split("_")[1:])
-            errors.append(
-                {"filename": filename_as_uploaded, "errors_in_file": errors_in_file}
-            )
+        filename_as_uploaded = "_".join(blob.name.split("_")[1:])
+        summary = UploadedFileSummary(filename_as_uploaded, errors_in_file)
+        uploaded_file_summaries.append(summary)
 
         for datapoint in datapoints:
             datapoint_collection.insert_one(
@@ -118,4 +124,4 @@ def main(msg: func.QueueMessage) -> None:
         os.remove(tmpname)
 
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "ready"}})
-    send_mail(uploader_email, errors)
+    send_mail(uploader_email, uploaded_file_summaries)

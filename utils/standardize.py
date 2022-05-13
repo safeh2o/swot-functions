@@ -2,6 +2,17 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
+
+
+class JSONDatapoint(TypedDict):
+    tsDate: str
+    hhDate: str
+    tsFrc: float
+    hhFrc: float
+    tsCond: int
+    tsTemp: int
+    timezoneOffset: int
 
 
 class Datapoint(object):
@@ -53,7 +64,7 @@ class Datapoint(object):
             **kwargs,
         }
 
-    def to_json(self) -> dict:
+    def to_json(self) -> JSONDatapoint:
         if self.ts_date:
             ts_date = datetime.isoformat(self.ts_date)
         else:
@@ -77,14 +88,29 @@ class Datapoint(object):
     def to_csv_line(self) -> str:
         values = []
         for column in self.DEFAULT_MAPPING.values():
-            val = getattr(self, column)
-            if isinstance(val, datetime):
-                val = val.isoformat()
-            elif val == None:
-                val = ""
-            values.append(str(val))
+            val = self.get_str_attr(column)
+            values.append(val)
 
         return ",".join(values)
+
+    def get_str_attr(self, attr) -> str:
+        val = getattr(self, attr)
+        if isinstance(val, datetime):
+            val = val.isoformat()
+        elif val == None:
+            val = ""
+        return str(val)
+
+    def copy(self) -> Datapoint:
+        return Datapoint(
+            self.ts_date,
+            self.hh_date,
+            self.ts_frc,
+            self.hh_frc,
+            self.ts_cond,
+            self.ts_temp,
+            self.timezone_offset,
+        )
 
     def __eq__(self, other: Datapoint) -> bool:
         return self.ts_date == other.ts_date and self.hh_date == other.hh_date
@@ -101,6 +127,10 @@ class Datapoint(object):
     def __repr__(self):
         return self.__str__()
 
+    @staticmethod
+    def header_line() -> str:
+        return ",".join(Datapoint.DEFAULT_MAPPING.keys())
+
     @classmethod
     def from_document(cls: Datapoint, document: dict) -> Datapoint:
         return cls(
@@ -114,8 +144,7 @@ class Datapoint(object):
         )
 
     def get_csv_lines(datapoints: list[Datapoint]) -> list[str]:
-        lines = []
-        lines.append(",".join(Datapoint.DEFAULT_MAPPING.keys()))
+        lines = [Datapoint.header_line()]
         for datapoint in datapoints:
             lines.append(str(datapoint))
         return lines
@@ -131,6 +160,31 @@ class Datapoint(object):
                 datapoint.hh_date = datapoint.hh_date.replace(
                     tzinfo=timezone.utc
                 ).astimezone(tzinfo)
+
+
+class StandardizationError:
+    def __init__(self, row_number: int, datapoint: Datapoint, bad_columns: set[str]):
+        self.row_number = row_number
+        self.datapoint = datapoint
+        self.bad_columns = bad_columns
+
+    def to_csv_line(self):
+        marked_datapoint = self.datapoint.copy()
+        values = []
+        for col in Datapoint.DEFAULT_MAPPING.values():
+            val = marked_datapoint.get_str_attr(col)
+            if col in self.bad_columns:
+                val += "*"
+            values.append(val)
+        row = ",".join(values)
+
+        return f"{self.row_number},{row}"
+
+
+class UploadedFileSummary:
+    def __init__(self, filename: str, errors: list[StandardizationError]):
+        self.filename = filename
+        self.errors = errors
 
 
 def round_time(dt: datetime):
@@ -230,20 +284,21 @@ def get_bad_columns(datapoint: Datapoint):
     if datapoint.timezone_offset == None:
         bad_columns.update({"ts_date", "hh_date"})
 
-    return list(bad_columns)
+    return bad_columns
 
 
 def extract(filename: str) -> tuple[list[Datapoint], list]:
     datapoints = []
-    errors = []
+    errors: list[StandardizationError] = []
 
     file = open(filename, "r")
-    header_line = file.readline().rstrip("\n")
-    header_line = header_line.split(",")
-    columns = Datapoint.DEFAULT_COLUMNS
+    first_line = file.readline().rstrip("\n")
+    first_line_columns = first_line.split(",")
     indices = {}
-    for col in columns:
-        indices[col] = [i for i, x in enumerate(header_line) if col in x][0]
+    for col in Datapoint.DEFAULT_COLUMNS:
+        indices[col] = [
+            i for i, column_name in enumerate(first_line_columns) if col in column_name
+        ][0]
 
     for row_number, l in enumerate(file, 2):
         # Skip over lines without six elements and empty lines
@@ -264,14 +319,10 @@ def extract(filename: str) -> tuple[list[Datapoint], list]:
         datapoint = Datapoint(
             ts_date, hh_date, ts_frc, hh_frc, ts_cond, ts_temp, timezone_offset
         )
-        errors_in_datapoint = get_bad_columns(datapoint)
+        bad_columns_in_datapoint = get_bad_columns(datapoint)
 
-        if errors_in_datapoint:
-            err = {
-                "row_number": row_number,
-                "datapoint": datapoint.to_json(),
-                "bad_columns": errors_in_datapoint,
-            }
+        if bad_columns_in_datapoint:
+            err = StandardizationError(row_number, datapoint, bad_columns_in_datapoint)
             errors.append(err)
         else:
             datapoints.append(datapoint)
