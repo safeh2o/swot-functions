@@ -21,7 +21,7 @@ def get_risk(frc_target, ann_frames):
     risks = []
     for df in ann_frames:
         risks.append(df["probability<=0.20"].loc[target_check_arg])
-    safety_range = [np.min(risks) * 100, np.max(risks) * 100]
+    safety_range = [(1 - np.max(risks)) * 100, (1 - np.min(risks)) * 100]
     return safety_range
 
 
