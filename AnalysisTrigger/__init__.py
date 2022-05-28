@@ -1,22 +1,9 @@
+import json
 import logging
 import os
 
 import azure.functions as func
 import certifi
-from azure.identity import ClientSecretCredential
-from azure.mgmt.containerinstance import ContainerInstanceManagementClient
-from azure.mgmt.containerinstance.models import (
-    Container,
-    ContainerGroup,
-    ContainerGroupRestartPolicy,
-    EnvironmentVariable,
-    ImageRegistryCredential,
-    OperatingSystemTypes,
-    ResourceRequests,
-    ResourceRequirements,
-    GpuResource,
-)
-from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from bson import ObjectId
 from pymongo import MongoClient
 from utils.logging import set_logger
@@ -74,6 +61,8 @@ def remove_duplicates(datapoints: list[dict]) -> list[Datapoint]:
 def main(
     msg: func.QueueMessage,
     output: func.Out[bytes],
+    anntrigger: func.Out[str],
+    eotrigger: func.Out[str],
 ) -> None:
     set_logger("SWOT-FUNCTIONS-ANALYSIS")
 
@@ -123,22 +112,7 @@ def main(
 
     output.set("\n".join(lines))
 
-    sp = ClientSecretCredential(
-        client_id=CLIENT_ID, client_secret=CLIENT_SECRET, tenant_id=TENANT_ID
-    )
-
-    registry_plain_creds = get_cr_credentials(
-        sp=sp,
-        subscription_id=SUBSCRIPTION_ID,
-    )
-
-    registry_credentials = ImageRegistryCredential(
-        server=f"{REGISTRY_NAME}.azurecr.io", **registry_plain_creds
-    )
-    ci_client = ContainerInstanceManagementClient(sp, subscription_id=SUBSCRIPTION_ID)
-    resource_group = {"location": RG_LOCATION, "name": RG_NAME}
-
-    env_dict = {
+    analysis_parameters = {
         "AZURE_STORAGE_KEY": AZURE_STORAGE_KEY,
         "MONGODB_CONNECTION_STRING": MONGODB_CONNECTION_STRING,
         "BLOB_NAME": f"{dataset_id}.csv",
@@ -147,109 +121,14 @@ def main(
         "DEST_CONTAINER_NAME": RESULTS_CONTAINER_NAME,
         "CONFIDENCE_LEVEL": dataset["confidenceLevel"],
         "MAX_DURATION": dataset["maxDuration"],
-        "TENANT_ID": TENANT_ID,
-        "CLIENT_ID": CLIENT_ID,
-        "CLIENT_SECRET": CLIENT_SECRET,
-        "SUBSCRIPTION_ID": SUBSCRIPTION_ID,
-        "RG_NAME": RG_NAME,
         "SENDGRID_API_KEY": SENDGRID_API_KEY,
         "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
         "WEBURL": WEBURL,
         "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
         "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
+        "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
+        "EPOCHS": os.getenv("EPOCHS"),
     }
 
-    create_container_group(
-        ci_client,
-        resource_group,
-        dataset_id,
-        registry_credentials,
-        env_dict,
-    )
-
-
-def get_cr_credentials(sp, subscription_id):
-    cl = ContainerRegistryManagementClient(sp, subscription_id=subscription_id)
-    creds = cl.registries.list_credentials(RG_NAME, REGISTRY_NAME)
-    username = creds.username
-    password = creds.passwords[0].value
-
-    creds = {"username": username, "password": password}
-
-    return creds
-
-
-def resolve_base_name(image_name):
-    return image_name.split("/")[-1].split(":")[0]
-
-
-def create_container_group(
-    ci_client,
-    resource_group,
-    container_group_name,
-    registry_credentials,
-    env_dict={},
-):
-    """Creates a container group with a multiple containers.
-
-    Arguments:
-        ci_client {azure.mgmt.containerinstance.ContainerInstanceManagementClient}
-                    -- An authenticated container instance management client.
-        resource_group {azure.mgmt.resource.resources.models.ResourceGroup}
-                    -- The resource group in which to create the container group.
-        container_group_name {str}
-                    -- The name of the container group to create.
-        container_image_name {str}
-                    -- The container image name and tag, for example:
-                       microsoft\ci-helloworld:latest
-    """
-    logging.info("Creating container group '{0}'...".format(container_group_name))
-
-    # Configure the container
-
-    base_env = [
-        EnvironmentVariable(name=key, value=value) for (key, value) in env_dict.items()
-    ]
-
-    # gpu_resource = GpuResource(count=1, sku="K80")
-    ann_container_resource_requests = ResourceRequests(memory_in_gb=3, cpu=2.0)
-    ann_container_resource_requirements = ResourceRequirements(
-        requests=ann_container_resource_requests
-    )
-
-    eo_container_resource_requests = ResourceRequests(memory_in_gb=1.5, cpu=1.0)
-    eo_container_resource_requirements = ResourceRequirements(
-        requests=eo_container_resource_requests
-    )
-    ann_container = Container(
-        name=ANN_CONTAINER_NAME,
-        image=f"{REGISTRY_NAME}.azurecr.io/{ANN_CONTAINER_NAME}:latest",
-        resources=ann_container_resource_requirements,
-        environment_variables=base_env,
-    )
-    eo_container = Container(
-        name=EO_CONTAINER_NAME,
-        image=f"{REGISTRY_NAME}.azurecr.io/{EO_CONTAINER_NAME}:latest",
-        resources=eo_container_resource_requirements,
-        environment_variables=base_env,
-    )
-    # Configure the container group
-    group = ContainerGroup(
-        location=resource_group["location"],
-        containers=[ann_container, eo_container],
-        os_type=OperatingSystemTypes.linux,
-        image_registry_credentials=[registry_credentials],
-        restart_policy=ContainerGroupRestartPolicy.NEVER,
-    )
-
-    # Create the container group
-    ci_client.container_groups.begin_create_or_update(
-        resource_group["name"], container_group_name, group
-    )
-
-    # Get the created container group
-    container_group = ci_client.container_groups.get(
-        resource_group["name"], container_group_name
-    )
-
-    logging.info(f"Container group {container_group.name} created")
+    anntrigger.set(json.dumps(analysis_parameters))
+    eotrigger.set(json.dumps(analysis_parameters))

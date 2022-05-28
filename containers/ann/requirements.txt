@@ -1,3 +1,0 @@
--r ../requirements.txt
-git+https://github.com/safeh2o/swot-python-analysis@master
-beautifulsoup4

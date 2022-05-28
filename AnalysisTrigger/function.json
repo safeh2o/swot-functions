@@ -14,6 +14,20 @@
       "name": "output",
       "path": "%ANALYSIS_CONTAINER_NAME%/{datasetId}.csv",
       "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "anntrigger",
+      "queueName": "%ANN_QUEUE_NAME%",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "eotrigger",
+      "queueName": "%EO_QUEUE_NAME%",
+      "connection": "AzureWebJobsStorage"
     }
   ]
 }

@@ -16,3 +16,11 @@ black
 openpyxl
 dnspython
 sendgrid
+
+# ann/eo requirements
+numpy
+pandas
+git+https://github.com/safeh2o/swot-python-analysis@master
+beautifulsoup4
+git+https://github.com/safeh2o/swot_eo_python_analysis@master
+

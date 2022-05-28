@@ -1,8 +1,0 @@
-azure-mgmt-containerinstance
-azure-identity
-azure-storage-blob
-pymongo
-dnspython
-sendgrid
-numpy
-pandas
