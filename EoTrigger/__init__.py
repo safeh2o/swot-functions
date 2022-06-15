@@ -1,15 +1,17 @@
 import json
 import logging
 import os
-import traceback
 import tempfile
+import traceback
 
 import azure.functions as func
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Content, Mail
 from swoteo.EO_ens_SWOT import EO_Ensemble
 from utils import containerutils
+from utils.containerutils import ContainerUtils
 from utils.logging import set_logger
 from utils.standalone_html import make_html_images_inline
-from utils.containerutils import ContainerUtils
 
 ANALYSIS_METHOD = containerutils.AnalysisMethod.EO
 
@@ -47,13 +49,26 @@ def main(msg: func.QueueMessage) -> None:
         )
         success = False
         logging.error(message)
+        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+        RG_NAME = os.getenv("RG_NAME")
+        email = Mail(
+            from_email="no-reply@safeh2o.app", to_emails=f"errors+{RG_NAME}@safeh2o.app"
+        )
+        email.subject = f"Error in {RG_NAME} EO"
+        email.add_content(
+            Content(
+                "text/plain",
+                f"An error occurred during EO analysis for dataset ID {controller.dataset_id}\n{message}",
+            )
+        )
+        sg.send(email)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
 
 
 def process_queue(controller: ContainerUtils):
     dataset_id = controller.dataset_id
-    set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
+    # set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 
     input_filepath = controller.download_src_blob()
     base_output_filename = f"{dataset_id}.csv"

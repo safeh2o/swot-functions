@@ -64,7 +64,7 @@ def main(
     anntrigger: func.Out[str],
     eotrigger: func.Out[str],
 ) -> None:
-    set_logger("SWOT-FUNCTIONS-ANALYSIS")
+    # set_logger("SWOT-FUNCTIONS-ANALYSIS")
 
     logging.info(
         "Python queue trigger function processed a queue item: %s",

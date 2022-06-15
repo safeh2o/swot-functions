@@ -50,7 +50,7 @@ def convert_xlsx_blob_to_csv(blob_client: BlobClient, fp: TextIOWrapper):
 
 
 def main(msg: func.QueueMessage) -> None:
-    set_logger("SWOT-FUNCTIONS-UPLOAD")
+    # set_logger("SWOT-FUNCTIONS-UPLOAD")
 
     ca = certifi.where()
     msg_json = msg.get_json()
