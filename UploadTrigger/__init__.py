@@ -72,6 +72,7 @@ def main(msg: func.QueueMessage) -> None:
         raise ModelNotFound(upload_id, COLLECTION_NAME)
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "processing"}})
 
+    fieldsite_id = upl["fieldsite"]
     is_overwriting = upl["overwriting"]
     in_container_name = upl["containerName"]
 
@@ -114,7 +115,7 @@ def main(msg: func.QueueMessage) -> None:
             datapoint_collection.insert_one(
                 datapoint.to_document(
                     upload=ObjectId(upload_id),
-                    fieldsite=upl["fieldsite"],
+                    fieldsite=fieldsite_id,
                     dateUploaded=upl[
                         "dateUploaded"
                     ],  # can be referenced by aggregation, but doing this for simplicity
@@ -123,5 +124,15 @@ def main(msg: func.QueueMessage) -> None:
             )
         os.remove(tmpname)
 
+    fieldsite_object = db.get_collection('fieldsites').find_one({"_id": fieldsite_id})
+    fieldsite_name = fieldsite_object['name']
+    area_id = fieldsite_object['area']
+    area_object = db.get_collection('areas').find_one({"_id": area_id})
+    area_name = area_object['name']
+    country_id = area_object['country']
+    country_object = db.get_collection('countries').find_one({"_id": country_id})
+    country_name = country_object['name']
+
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "ready"}})
-    send_mail(uploader_email, uploaded_file_summaries)
+
+    send_mail(uploader_email, uploaded_file_summaries, country_name, area_name, fieldsite_name)

@@ -75,35 +75,36 @@ def process_queue(controller: ContainerUtils, network_count: int, epochs: int):
     input_filepath = controller.download_src_blob()
     base_output_filename = f"{dataset_id}.csv"
 
-    tmpdir = tempfile.mkdtemp()
-    output_dirname = os.path.join(tmpdir, dataset_id)
-    os.makedirs(output_dirname)
+    with tempfile.TemporaryDirectory() as tmpdir:
+    # tmpdir = tempfile.mkdtemp()
+        output_dirname = os.path.join(tmpdir, dataset_id)
+        os.makedirs(output_dirname)
 
-    # run swot analysis on downloaded blob
-    if network_count and epochs:
-        ann = NNetwork(int(network_count), int(epochs))
-    elif network_count:
-        ann = NNetwork(network_count=int(network_count))
-    elif epochs:
-        ann = NNetwork(epochs=int(epochs))
-    else:
-        ann = NNetwork()
+        # run swot analysis on downloaded blob
+        if network_count and epochs:
+            ann = NNetwork(int(network_count), int(epochs))
+        elif network_count:
+            ann = NNetwork(network_count=int(network_count))
+        elif epochs:
+            ann = NNetwork(epochs=int(epochs))
+        else:
+            ann = NNetwork()
 
-    # results filename will be the same as the input filename, but that's OK because they'll live in different directories
-    results_filepath = os.path.join(output_dirname, base_output_filename)
-    report_filepath = results_filepath.replace(".csv", ".html")
-    metadata = ann.run_swot(
-        input_filepath, results_filepath, report_filepath, controller.max_duration
-    )
-    controller.update_dataset({"ann": metadata})
+        # results filename will be the same as the input filename, but that's OK because they'll live in different directories
+        results_filepath = os.path.join(output_dirname, base_output_filename)
+        report_filepath = results_filepath.replace(".csv", ".html")
+        metadata = ann.run_swot(
+            input_filepath, results_filepath, report_filepath, controller.max_duration
+        )
+        controller.update_dataset({"ann": metadata})
 
-    # make report file standalone (convert all images to base64)
-    report_file_standalone = report_filepath.replace(".html", "-standalone.html")
-    make_html_images_inline(report_filepath, report_file_standalone)
+        # make report file standalone (convert all images to base64)
+        report_file_standalone = report_filepath.replace(".html", "-standalone.html")
+        make_html_images_inline(report_filepath, report_file_standalone)
 
-    output_files = [
-        os.path.join(output_dirname, file) for file in os.listdir(output_dirname)
-    ]
+        output_files = [
+            os.path.join(output_dirname, file) for file in os.listdir(output_dirname)
+        ]
 
-    directory_name = dataset_id
-    controller.upload_files(directory_name, output_files)
+        directory_name = dataset_id
+        controller.upload_files(directory_name, output_files)

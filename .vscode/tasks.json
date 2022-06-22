@@ -99,7 +99,7 @@
           "PAPERTRAIL_ADDRESS": "${config:containers.env.PAPERTRAIL_ADDRESS}",
           "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
           "CONFIDENCE_LEVEL": "minDecay",
-          "MAX_DURATION": "3",
+          "MAX_DURATION": "3"
         }
       }
     },
@@ -122,7 +122,7 @@
           "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
           "NETWORK_COUNT": "5",
           "EPOCHS": "100",
-          "MAX_DURATION": "3",
+          "MAX_DURATION": "3"
         }
       }
     },
@@ -140,7 +140,7 @@
         "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
       },
       "windows": {
-        "command": "${config:azureFunctions.pythonVenv}\\Scripts\\python -m pip install -r requirements.txt"
+        "command": "${config:azureFunctions.pythonVenv}/Scripts/python -m pip install -r requirements.txt"
       },
       "linux": {
         "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
