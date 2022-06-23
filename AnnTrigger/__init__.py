@@ -12,6 +12,9 @@ from utils import containerutils
 from utils.containerutils import ContainerUtils
 from utils.logging import set_logger
 from utils.standalone_html import make_html_images_inline
+import matplotlib as mpl
+
+mpl.use("agg")
 
 ANALYSIS_METHOD = containerutils.AnalysisMethod.ANN
 
@@ -76,7 +79,7 @@ def process_queue(controller: ContainerUtils, network_count: int, epochs: int):
     base_output_filename = f"{dataset_id}.csv"
 
     with tempfile.TemporaryDirectory() as tmpdir:
-    # tmpdir = tempfile.mkdtemp()
+        # tmpdir = tempfile.mkdtemp()
         output_dirname = os.path.join(tmpdir, dataset_id)
         os.makedirs(output_dirname)
 

@@ -12,6 +12,9 @@ from utils import containerutils
 from utils.containerutils import ContainerUtils
 from utils.logging import set_logger
 from utils.standalone_html import make_html_images_inline
+import matplotlib as mpl
+
+mpl.use("agg")
 
 ANALYSIS_METHOD = containerutils.AnalysisMethod.EO
 
