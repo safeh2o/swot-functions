@@ -183,10 +183,17 @@ class ContainerUtils:
                 case_filepaths=case_filepaths,
                 input_file=input_filepath,
             )
+
+            if dataset["status"][AnalysisMethod.ANN.value]["success"] and dataset["status"][AnalysisMethod.EO.value]["success"]:
+                completion_status = 'complete'
+            else:
+                completion_status = 'failed'
+
             self.update_dataset(
                 {
                     "safety_range": water_safety["safety_range"],
                     "safe_percent": water_safety["safe_percent"],
+                    'completionStatus': completion_status
                 }
             )
             logging.info(
