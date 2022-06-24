@@ -5,11 +5,14 @@ import socket
 from datetime import datetime
 from enum import Enum
 from tempfile import NamedTemporaryFile
+from typing import TypedDict
 
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
 
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Content, Mail
 from .postprocessing import postprocess
 
 
@@ -31,7 +34,7 @@ class ContextFilter(logging.Filter):
         return True
 
 
-class ContainerUtils:
+class AnalysisUtils:
     def __init__(
         self,
         azure_storage_key: str,
@@ -45,12 +48,14 @@ class ContainerUtils:
         blob_name: str,
         max_duration: int,
         confidence_level: str,
+        rg_name: str,
     ):
         self.azure_storage_key = azure_storage_key
         self.mongodb_connection_str = mongodb_connection_str
         self.dataset_id = dataset_id
         self.sg_template_id = sg_template_id
         self.sg_api_key = sg_api_key
+        self.sg_client = SendGridAPIClient(self.sg_api_key)
         self.weburl = weburl
         self.dest_container = dest_container
         self.src_container = src_container
@@ -70,6 +75,7 @@ class ContainerUtils:
         self.dataset_collection = self.db.get_collection("datasets")
         self.max_duration = max_duration
         self.confidence_level = confidence_level
+        self.rg_name = rg_name
 
     def upload_files(self, directory_name: str, file_paths: list[str]):
         for out_file in file_paths:
@@ -92,7 +98,7 @@ class ContainerUtils:
 
         if not blob_client.exists():
             logging.error("No blobs in the queue to process...")
-            return
+            return ""
 
         # download blob and save
         with fp as downloaded_file:
@@ -106,9 +112,10 @@ class ContainerUtils:
             {"_id": ObjectId(self.dataset_id)}, update_operation
         )
 
-    def get_user(self, user_id: str):
-        db = self.mongo_client.get_database()
-        user_collection = db.get_collection("users")
+    def get_user(self):
+        dataset = self.get_dataset()
+        user_id = dataset["user"]
+        user_collection = self.db.get_collection("users")
         return user_collection.find_one({"_id": user_id})
 
     def is_all_analysis_complete(self) -> bool:
@@ -124,19 +131,14 @@ class ContainerUtils:
         return self.dataset_collection.find_one({"_id": ObjectId(self.dataset_id)})
 
     def send_analysis_confirmation_email(self):
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
-
-        dataset = self.get_dataset()
-        user = self.get_user(dataset["user"])
+        user = self.get_user()
         results_url = f"{self.weburl}/results/{self.dataset_id}"
 
         message = Mail(from_email="no-reply@safeh2o.app", to_emails=user["email"])
         message.template_id = self.sg_template_id
         message.dynamic_template_data = {"resultsUrl": results_url}
         try:
-            sg = SendGridAPIClient(self.sg_api_key)
-            sg.send(message)
+            self.sg_client.send(message)
         except Exception as e:
             logging.error(e)
 
@@ -184,16 +186,19 @@ class ContainerUtils:
                 input_file=input_filepath,
             )
 
-            if dataset["status"][AnalysisMethod.ANN.value]["success"] and dataset["status"][AnalysisMethod.EO.value]["success"]:
-                completion_status = 'complete'
+            if (
+                dataset["status"][AnalysisMethod.ANN.value]["success"]
+                and dataset["status"][AnalysisMethod.EO.value]["success"]
+            ):
+                completion_status = "complete"
             else:
-                completion_status = 'failed'
+                completion_status = "failed"
 
             self.update_dataset(
                 {
                     "safety_range": water_safety["safety_range"],
                     "safe_percent": water_safety["safe_percent"],
-                    'completionStatus': completion_status
+                    "completionStatus": completion_status,
                 }
             )
             logging.info(
@@ -201,3 +206,67 @@ class ContainerUtils:
             )
             self.send_analysis_confirmation_email()
             self.update_dataset({"isComplete": True})
+
+    def send_error_email(self, method: AnalysisMethod, message: str):
+        fieldsite = self.get_fieldsite()
+        fieldsite_id = fieldsite["_id"]
+        locations = get_locations_from_fieldsite_id(fieldsite_id, self.db)
+        country_name = locations["country"]
+        area_name = locations["area"]
+        fieldsite_name = locations["fieldsite"]
+        user = self.get_user()
+        user_fullname = f'{user["name"]["first"]} {user["name"]["last"]}'
+        user_email = user["email"]
+        dataset = self.get_dataset()
+        date_of_analysis: datetime = dataset["dateCreated"]
+        start_date = dataset["startDate"]
+        end_date = dataset["endDate"]
+
+        email = Mail(
+            from_email="no-reply@safeh2o.app",
+            to_emails=f"errors+{self.rg_name}@safeh2o.app",
+        )
+        email.subject = f"Error in {self.rg_name} {method.value}"
+        email.add_content(
+            Content(
+                "text/plain",
+                f"""An error occurred during analysis.
+                Analysis type: {method.value}
+                Dataset ID: {self.dataset_id}
+                User name: {user_fullname}
+                User email: {user_email}
+                Fieldsite: {fieldsite_name}
+                Area: {area_name}
+                Country: {country_name}
+                Date of analysis: {date_of_analysis.isoformat()}
+                Start date: {start_date.isoformat()}
+                End date: {end_date.isoformat()}
+
+                Stack trace: 
+                {message}
+                """,
+            )
+        )
+        self.sg_client.send(email)
+
+    def get_fieldsite(self):
+        dataset = self.get_dataset()
+        return dataset["fieldsite"]
+
+
+class LocationInfo(TypedDict):
+    country: str
+    area: str
+    fieldsite: str
+
+
+def get_locations_from_fieldsite_id(fieldsite_id: str, db) -> LocationInfo:
+    fieldsite_object = db.get_collection("fieldsites").find_one({"_id": fieldsite_id})
+    fieldsite_name = fieldsite_object["name"]
+    area_id = fieldsite_object["area"]
+    area_object = db.get_collection("areas").find_one({"_id": area_id})
+    area_name = area_object["name"]
+    country_id = area_object["country"]
+    country_object = db.get_collection("countries").find_one({"_id": country_id})
+    country_name = country_object["name"]
+    return {"country": country_name, "area": area_name, "fieldsite": fieldsite_name}

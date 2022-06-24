@@ -14,6 +14,7 @@ from pymongo import MongoClient
 from utils.logging import set_logger
 from utils.mailing import send_mail
 from utils.standardize import UploadedFileSummary, extract
+from utils.swotutils import get_locations_from_fieldsite_id
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
 PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
@@ -124,15 +125,13 @@ def main(msg: func.QueueMessage) -> None:
             )
         os.remove(tmpname)
 
-    fieldsite_object = db.get_collection('fieldsites').find_one({"_id": fieldsite_id})
-    fieldsite_name = fieldsite_object['name']
-    area_id = fieldsite_object['area']
-    area_object = db.get_collection('areas').find_one({"_id": area_id})
-    area_name = area_object['name']
-    country_id = area_object['country']
-    country_object = db.get_collection('countries').find_one({"_id": country_id})
-    country_name = country_object['name']
+    location_names = get_locations_from_fieldsite_id(fieldsite_id, db)
+    country_name = location_names["country"]
+    area_name = location_names["area"]
+    fieldsite_name = location_names["fieldsite"]
 
     col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "ready"}})
 
-    send_mail(uploader_email, uploaded_file_summaries, country_name, area_name, fieldsite_name)
+    send_mail(
+        uploader_email, uploaded_file_summaries, country_name, area_name, fieldsite_name
+    )

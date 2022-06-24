@@ -5,18 +5,16 @@ import tempfile
 import traceback
 
 import azure.functions as func
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Content, Mail
 from swotann.nnetwork import NNetwork
-from utils import containerutils
-from utils.containerutils import ContainerUtils
+from utils import swotutils
+from utils.swotutils import AnalysisMethod, AnalysisUtils
 from utils.logging import set_logger
 from utils.standalone_html import make_html_images_inline
 import matplotlib as mpl
 
 mpl.use("agg")
 
-ANALYSIS_METHOD = containerutils.AnalysisMethod.ANN
+ANALYSIS_METHOD = swotutils.AnalysisMethod.ANN
 
 
 def main(msg: func.QueueMessage) -> None:
@@ -30,7 +28,7 @@ def main(msg: func.QueueMessage) -> None:
         decoded_msg,
     )
 
-    controller = ContainerUtils(
+    controller = AnalysisUtils(
         analysis_parameters["AZURE_STORAGE_KEY"],
         analysis_parameters["MONGODB_CONNECTION_STRING"],
         analysis_parameters["DATASET_ID"],
@@ -42,6 +40,7 @@ def main(msg: func.QueueMessage) -> None:
         analysis_parameters["BLOB_NAME"],
         analysis_parameters["MAX_DURATION"],
         analysis_parameters["CONFIDENCE_LEVEL"],
+        analysis_parameters["RG_NAME"],
     )
 
     try:
@@ -54,24 +53,13 @@ def main(msg: func.QueueMessage) -> None:
         )
         success = False
         logging.error(message)
-        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
-        RG_NAME = os.getenv("RG_NAME")
-        email = Mail(
-            from_email="no-reply@safeh2o.app", to_emails=f"errors+{RG_NAME}@safeh2o.app"
-        )
-        email.subject = f"Error in {RG_NAME} ANN"
-        email.add_content(
-            Content(
-                "text/plain",
-                f"An error occurred during ANN analysis for dataset ID {controller.dataset_id}\n{message}",
-            )
-        )
-        sg.send(email)
+
+        controller.send_error_email(AnalysisMethod.ANN, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
 
 
-def process_queue(controller: ContainerUtils, network_count: int, epochs: int):
+def process_queue(controller: AnalysisUtils, network_count: int, epochs: int):
     dataset_id = controller.dataset_id
     # set_logger(f"{dataset_id}-{ANALYSIS_METHOD}")
 

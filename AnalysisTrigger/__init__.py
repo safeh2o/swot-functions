@@ -128,6 +128,7 @@ def main(
         "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
         "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
         "EPOCHS": os.getenv("EPOCHS"),
+        "RG_NAME": RG_NAME
     }
 
     anntrigger.set(json.dumps(analysis_parameters))
