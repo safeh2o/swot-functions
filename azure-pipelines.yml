@@ -16,9 +16,16 @@ stages:
             pool:
                 vmImage: $(vmImageName)
             steps:
+                - task: ArchiveFiles@2
+                  inputs:
+                    rootFolderOrFile: '$(Build.SourcesDirectory)'
+                    includeRootFolder: true
+                    archiveType: 'zip'
+                    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+                    replaceExistingArchive: true
                 - task: PublishPipelineArtifact@1
                   displayName: Publish Artifacts
                   inputs:
-                      targetPath: "$(Build.SourcesDirectory)"
+                      targetPath: "$(Build.ArtifactStagingDirectory)"
                       publishLocation: "pipeline"
                       artifact: $(Build.BuildId)
