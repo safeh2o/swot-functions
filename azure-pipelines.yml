@@ -16,9 +16,9 @@ stages:
             pool:
                 vmImage: $(vmImageName)
             steps:
-                - task: PublishPipelineArtifact@1
+                - task: PublishBuildArtifacts@1
                   displayName: Publish Artifacts
                   inputs:
-                      targetPath: "$(Build.SourcesDirectory)"
-                      publishLocation: "pipeline"
-                      artifact: $(Build.BuildId)
+                      PathtoPublish: '$(Build.SourcesDirectory)'
+                      ArtifactName: '$(Build.BuildId)'
+                      publishLocation: 'FilePath'
