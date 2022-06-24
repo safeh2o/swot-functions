@@ -14,12 +14,6 @@ PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
 AZURE_STORAGE_KEY = os.getenv("AzureWebJobsStorage")
 ANALYSIS_CONTAINER_NAME = os.getenv("ANALYSIS_CONTAINER_NAME")
 RESULTS_CONTAINER_NAME = os.getenv("RESULTS_CONTAINER_NAME")
-TENANT_ID = os.getenv("TENANT_ID")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
-REGISTRY_NAME = os.getenv("REGISTRY_NAME")
-RG_LOCATION = os.getenv("RG_LOCATION")
 RG_NAME = os.getenv("RG_NAME")
 WEBURL = os.getenv("WEBURL").rstrip("/")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
@@ -128,7 +122,7 @@ def main(
         "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
         "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
         "EPOCHS": os.getenv("EPOCHS"),
-        "RG_NAME": RG_NAME
+        "RG_NAME": RG_NAME,
     }
 
     anntrigger.set(json.dumps(analysis_parameters))
