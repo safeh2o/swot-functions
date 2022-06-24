@@ -208,8 +208,7 @@ class AnalysisUtils:
             self.update_dataset({"isComplete": True})
 
     def send_error_email(self, method: AnalysisMethod, message: str):
-        fieldsite = self.get_fieldsite()
-        fieldsite_id = fieldsite["_id"]
+        fieldsite_id = self.get_fieldsite()
         locations = get_locations_from_fieldsite_id(fieldsite_id, self.db)
         country_name = locations["country"]
         area_name = locations["area"]
@@ -219,8 +218,8 @@ class AnalysisUtils:
         user_email = user["email"]
         dataset = self.get_dataset()
         date_of_analysis: datetime = dataset["dateCreated"]
-        start_date = dataset["startDate"]
-        end_date = dataset["endDate"]
+        first_sample = dataset["firstSample"]
+        last_sample = dataset["lastSample"]
 
         email = Mail(
             from_email="no-reply@safeh2o.app",
@@ -239,8 +238,8 @@ class AnalysisUtils:
                 Area: {area_name}
                 Country: {country_name}
                 Date of analysis: {date_of_analysis.isoformat()}
-                Start date: {start_date.isoformat()}
-                End date: {end_date.isoformat()}
+                First sample: {first_sample.isoformat()}
+                Last sample: {last_sample.isoformat()}
 
                 Stack trace: 
                 {message}
@@ -263,10 +262,9 @@ class LocationInfo(TypedDict):
 def get_locations_from_fieldsite_id(fieldsite_id: str, db) -> LocationInfo:
     fieldsite_object = db.get_collection("fieldsites").find_one({"_id": fieldsite_id})
     fieldsite_name = fieldsite_object["name"]
-    area_id = fieldsite_object["area"]
-    area_object = db.get_collection("areas").find_one({"_id": area_id})
+    area_object = db.get_collection("areas").find_one({"fieldsites": fieldsite_id})
+    area_id = area_object["_id"]
     area_name = area_object["name"]
-    country_id = area_object["country"]
-    country_object = db.get_collection("countries").find_one({"_id": country_id})
+    country_object = db.get_collection("countries").find_one({"areas": area_id})
     country_name = country_object["name"]
     return {"country": country_name, "area": area_name, "fieldsite": fieldsite_name}
