@@ -3,6 +3,8 @@ import logging
 import os
 import tempfile
 from io import TextIOWrapper
+from typing import Any, Dict, TextIO
+from __future__ import annotations
 from uuid import uuid4
 
 import azure.functions as func
@@ -30,9 +32,11 @@ def generate_random_filename(extension="csv"):
     return str(uuid4()) + f".{extension}"
 
 
-def convert_xlsx_blob_to_csv(blob_client: BlobClient, fp: TextIOWrapper):
+def convert_xlsx_blob_to_csv(
+    blob_client: BlobClient, fp: tempfile._TemporaryFileWrapper
+):
     xlsx_fp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
-    xlsx_fp.write(blob_client.download_blob().readall())
+    xlsx_fp.write(blob_client.download_blob().content_as_text())
     xlsx_fp.close()
 
     wb = openpyxl.load_workbook(xlsx_fp.name, read_only=True, data_only=True)
@@ -63,10 +67,13 @@ def main(msg: func.QueueMessage) -> None:
     )
 
     MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
-    AZURE_STORAGE_CONNECTION_STRING = os.getenv("AzureWebJobsStorage")
-    COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+    AZURE_STORAGE_CONNECTION_STRING = os.getenv("AzureWebJobsStorage", "")
+    COLLECTION_NAME = os.getenv("COLLECTION_NAME", "")
 
-    db = MongoClient(MONGODB_CONNECTION_STRING, tlsCAFile=ca).get_database()
+    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
+        MONGODB_CONNECTION_STRING, tlsCAFile=ca
+    )
+    db = mongo_client.get_database()
     col = db.get_collection(COLLECTION_NAME)
     upl = col.find_one({"_id": ObjectId(upload_id)})
     if not upl:
@@ -77,7 +84,7 @@ def main(msg: func.QueueMessage) -> None:
     is_overwriting = upl["overwriting"]
     in_container_name = upl["containerName"]
 
-    blob_cc = ContainerClient.from_connection_string(
+    blob_cc: ContainerClient = ContainerClient.from_connection_string(
         AZURE_STORAGE_CONNECTION_STRING, in_container_name
     )
 

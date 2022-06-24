@@ -5,14 +5,11 @@ import tempfile
 import traceback
 
 import azure.functions as func
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Content, Mail
+import matplotlib as mpl
 from swoteo.EO_ens_SWOT import EO_Ensemble
-from utils import swotutils
-from utils.swotutils import AnalysisMethod, AnalysisUtils
 from utils.logging import set_logger
 from utils.standalone_html import make_html_images_inline
-import matplotlib as mpl
+from utils.swotutils import AnalysisMethod, AnalysisUtils
 
 mpl.use("agg")
 
@@ -53,7 +50,7 @@ def main(msg: func.QueueMessage) -> None:
         )
         success = False
         logging.error(message)
-        
+
         controller.send_error_email(ANALYSIS_METHOD, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)

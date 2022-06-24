@@ -40,7 +40,11 @@ def send_mail(email, uploaded_file_summaries, country_name, area_name, fieldsite
     analyze_url = f"{WEBURL}/analyze#country={quote_plus(country_name)}&area={quote_plus(area_name)}&fieldsite={quote_plus(fieldsite_name)}"
     message = Mail(from_email="no-reply@safeh2o.app", to_emails=email)
     message.template_id = os.environ.get("SENDGRID_UPLOAD_SUMMARY_TEMPLATE_ID")
-    message.dynamic_template_data = {"errors": [], "analyzeUrl": analyze_url, "fieldsiteName": fieldsite_name}
+    message.dynamic_template_data = {
+        "errors": [],
+        "analyzeUrl": analyze_url,
+        "fieldsiteName": fieldsite_name,
+    }
     attachments = create_error_attachments(uploaded_file_summaries)
     message.attachment = attachments
 

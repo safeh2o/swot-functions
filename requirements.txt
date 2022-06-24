@@ -13,6 +13,7 @@ dnspython
 sendgrid
 
 # ann/eo requirements
+python-magic
 numpy
 pandas
 git+https://github.com/safeh2o/swot-python-analysis@master

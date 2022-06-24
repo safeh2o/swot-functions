@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
+from typing import Any, Dict
 
 import azure.functions as func
 import certifi
@@ -15,7 +18,7 @@ AZURE_STORAGE_KEY = os.getenv("AzureWebJobsStorage")
 ANALYSIS_CONTAINER_NAME = os.getenv("ANALYSIS_CONTAINER_NAME")
 RESULTS_CONTAINER_NAME = os.getenv("RESULTS_CONTAINER_NAME")
 RG_NAME = os.getenv("RG_NAME")
-WEBURL = os.getenv("WEBURL").rstrip("/")
+WEBURL = os.getenv("WEBURL", "").rstrip("/")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID = os.getenv(
     "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"
@@ -54,7 +57,7 @@ def remove_duplicates(datapoints: list[dict]) -> list[Datapoint]:
 
 def main(
     msg: func.QueueMessage,
-    output: func.Out[bytes],
+    output: func.Out[str],
     anntrigger: func.Out[str],
     eotrigger: func.Out[str],
 ) -> None:
@@ -69,10 +72,14 @@ def main(
     msg_json = msg.get_json()
     dataset_id = msg_json["datasetId"]
 
-    db = MongoClient(MONGODB_CONNECTION_STRING, tlsCAFile=ca).get_database()
+    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
+        MONGODB_CONNECTION_STRING, tlsCAFile=ca
+    )
+    db = mongo_client.get_database()
     dataset_collection = db.get_collection("datasets")
     datapoint_collection = db.get_collection("datapoints")
     dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
+    assert isinstance(dataset, dict)
     (start_date, end_date) = (dataset["startDate"], dataset["endDate"])
 
     date_filter = {"$lt": end_date}

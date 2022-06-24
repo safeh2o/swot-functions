@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict
+from typing import Type, TypedDict
 
 
 class JSONDatapoint(TypedDict):
-    tsDate: str
-    hhDate: str
+    tsDate: str | None
+    hhDate: str | None
     tsFrc: float
     hhFrc: float
     tsCond: int
@@ -43,7 +43,7 @@ class Datapoint(object):
         ts_cond: int,
         ts_temp: int,
         timezone_offset: int,
-    ) -> Datapoint:
+    ):
         self.ts_date = ts_date
         self.hh_date = hh_date
         self.ts_frc = ts_frc
@@ -112,13 +112,19 @@ class Datapoint(object):
             self.timezone_offset,
         )
 
-    def __eq__(self, other: Datapoint) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Datapoint):
+            return False
         return self.ts_date == other.ts_date and self.hh_date == other.hh_date
 
-    def __gt__(self, other: Datapoint) -> bool:
+    def __gt__(self, other) -> bool:
+        if not isinstance(other, Datapoint):
+            return False
         return self.ts_date > other.ts_date and self.hh_date > other.hh_date
 
-    def __ge__(self, other: Datapoint) -> bool:
+    def __ge__(self, other) -> bool:
+        if not isinstance(other, Datapoint):
+            return False
         return self.__eq__(other) or self.__gt__(other)
 
     def __str__(self):
@@ -132,7 +138,7 @@ class Datapoint(object):
         return ",".join(Datapoint.DEFAULT_MAPPING.keys())
 
     @classmethod
-    def from_document(cls: Datapoint, document: dict) -> Datapoint:
+    def from_document(cls: Type[Datapoint], document: dict) -> Datapoint:
         return cls(
             ts_date=document["tsDate"],
             hh_date=document["hhDate"],
@@ -143,13 +149,15 @@ class Datapoint(object):
             timezone_offset=document["timezoneOffset"],
         )
 
+    @staticmethod
     def get_csv_lines(datapoints: list[Datapoint]) -> list[str]:
         lines = [Datapoint.header_line()]
         for datapoint in datapoints:
             lines.append(str(datapoint))
         return lines
 
-    def add_timezones(datapoints: list[Datapoint]) -> list[Datapoint]:
+    @staticmethod
+    def add_timezones(datapoints: list[Datapoint]):
         for datapoint in datapoints:
             timezone_offset = datapoint.timezone_offset
             if timezone_offset:
@@ -232,8 +240,11 @@ def format_plain_date(date_string: str):
 
 def get_timezone_offset(ts_date: datetime, hh_date: datetime) -> int:
     if not ts_date or not hh_date or ts_date.tzinfo != hh_date.tzinfo:
-        return None
-    return ts_date.utcoffset().total_seconds()
+        return 0
+    assert isinstance(ts_date, datetime)
+    offset = ts_date.utcoffset()
+    assert isinstance(offset, timedelta)
+    return int(offset.total_seconds())
 
 
 def try_format(num_string: str, cast_type):

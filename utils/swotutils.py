@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import mimetypes
 import os
@@ -10,9 +12,9 @@ from typing import TypedDict
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
-
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Content, Mail
+
 from .postprocessing import postprocess
 
 

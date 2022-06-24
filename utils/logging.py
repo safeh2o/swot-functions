@@ -1,5 +1,6 @@
-import os
+# type: ignore
 import logging
+import os
 import socket
 from logging.handlers import SysLogHandler
 

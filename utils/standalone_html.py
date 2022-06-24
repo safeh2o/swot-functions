@@ -6,7 +6,12 @@
 #
 # Usage: python standalone_html.py <input_file.html> <output_file.html>
 
+import base64
+import mimetypes
 import os
+import sys
+
+import magic  # python-magic
 from bs4 import BeautifulSoup
 
 
@@ -24,11 +29,10 @@ def guess_type(filepath):
     :rtype: str
     """
     try:
-        import magic  # python-magic
         return magic.from_file(filepath, mime=True)
     except ImportError:
-        import mimetypes
         return mimetypes.guess_type(filepath)[0]
+
 
 def file_to_base64(filepath):
     """
@@ -39,10 +43,10 @@ def file_to_base64(filepath):
     :return: The file content, Base64 encoded.
     :rtype: str
     """
-    import base64
-    with open(filepath, 'rb') as f:
+
+    with open(filepath, "rb") as f:
         encoded_str = base64.b64encode(f.read())
-    return encoded_str.decode('utf-8')
+    return encoded_str.decode("utf-8")
 
 
 def make_html_images_inline(in_filepath, out_filepath):
@@ -56,16 +60,15 @@ def make_html_images_inline(in_filepath, out_filepath):
     :type out_filepath: str
     """
     basepath = os.path.split(in_filepath.rstrip(os.path.sep))[0]
-    soup = BeautifulSoup(open(in_filepath, 'r'), 'html.parser')
-    for img in soup.find_all('img'):
-        img_path = os.path.join(basepath, img.attrs['src'])
+    soup = BeautifulSoup(open(in_filepath, "r"), "html.parser")
+    for img in soup.find_all("img"):
+        img_path = os.path.join(basepath, img.attrs["src"])
         mimetype = guess_type(img_path)
-        img.attrs['src'] = \
-            "data:%s;base64,%s" % (mimetype, file_to_base64(img_path))
+        img.attrs["src"] = "data:%s;base64,%s" % (mimetype, file_to_base64(img_path))
 
-    with open(out_filepath, 'w') as of:
+    with open(out_filepath, "w") as of:
         of.write(str(soup))
 
-if __name__ == '__main__':
-    import sys
+
+if __name__ == "__main__":
     make_html_images_inline(sys.argv[1], sys.argv[2])
