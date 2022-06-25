@@ -11,6 +11,7 @@ black
 openpyxl
 dnspython
 sendgrid
+certifi
 
 # ann/eo requirements
 python-magic

@@ -51,7 +51,7 @@ def send_mail(email, uploaded_file_summaries, country_name, area_name, fieldsite
 
     try:
         sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
-        response = sg.send(message)
-        logging.info(f"sent upload confirmation email to {email}")
+        sg.send(message)
+        logging.info("sent upload confirmation email to %s", email)
     except Exception as err:
         logging.error(err)

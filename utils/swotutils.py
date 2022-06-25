@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import mimetypes
 import os
-import socket
 from datetime import datetime
 from enum import Enum
 from tempfile import NamedTemporaryFile
@@ -26,14 +25,6 @@ class Status(Enum):
 class AnalysisMethod(Enum):
     ANN = "ann"
     EO = "eo"
-
-
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
-
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
 
 
 class AnalysisUtils:
