@@ -133,6 +133,9 @@ def main(
             "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
             "EPOCHS": os.getenv("EPOCHS"),
             "RG_NAME": RG_NAME,
+            "ERROR_RECEPIENT_EMAIL": os.getenv(
+                "ERROR_RECEPIENT_EMAIL", f"errors+{RG_NAME}@safeh2o.app"
+            ),
         }
 
         anntrigger.set(json.dumps(analysis_parameters))

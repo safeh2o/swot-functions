@@ -51,6 +51,7 @@ class AnalysisUtils:
         max_duration: int,
         confidence_level: str,
         rg_name: str,
+        error_recepient: str,
     ):
         self.azure_storage_key = azure_storage_key
         self.mongodb_connection_str = mongodb_connection_str
@@ -78,6 +79,7 @@ class AnalysisUtils:
         self.max_duration = max_duration
         self.confidence_level = confidence_level
         self.rg_name = rg_name
+        self.error_recepient = error_recepient
 
     def upload_files(self, directory_name: str, file_paths: list[str]):
         for out_file in file_paths:
@@ -225,7 +227,7 @@ class AnalysisUtils:
 
         email = Mail(
             from_email="no-reply@safeh2o.app",
-            to_emails=f"errors+{self.rg_name}@safeh2o.app",
+            to_emails=self.error_recepient,
         )
         email.subject = f"Error in {self.rg_name} {method.value}"
         email.add_content(

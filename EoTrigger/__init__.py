@@ -39,6 +39,7 @@ def main(msg: func.QueueMessage) -> None:
             analysis_parameters["MAX_DURATION"],
             analysis_parameters["CONFIDENCE_LEVEL"],
             analysis_parameters["RG_NAME"],
+            analysis_parameters["ERROR_RECEPIENT_EMAIL"],
         )
 
         success = True
