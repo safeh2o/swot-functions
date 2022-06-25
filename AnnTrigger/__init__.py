@@ -8,7 +8,7 @@ import azure.functions as func
 from swotann.nnetwork import NNetwork
 from utils import swotutils
 from utils.swotutils import AnalysisMethod, AnalysisUtils
-from utils.logging import set_logger
+from utils.loggingutils import set_logger
 from utils.standalone_html import make_html_images_inline
 import matplotlib as mpl
 

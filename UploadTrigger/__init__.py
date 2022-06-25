@@ -13,7 +13,7 @@ import openpyxl
 from azure.storage.blob import BlobClient, ContainerClient
 from bson.objectid import ObjectId
 from pymongo import MongoClient
-from utils.logging import set_logger
+from utils.loggingutils import set_logger
 from utils.mailing import send_mail
 from utils.standardize import UploadedFileSummary, extract
 from utils.swotutils import get_locations_from_fieldsite_id

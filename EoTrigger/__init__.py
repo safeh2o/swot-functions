@@ -7,7 +7,7 @@ import traceback
 import azure.functions as func
 import matplotlib as mpl
 from swoteo.EO_ens_SWOT import EO_Ensemble
-from utils.logging import set_logger
+from utils.loggingutils import set_logger
 from utils.standalone_html import make_html_images_inline
 from utils.swotutils import AnalysisMethod, AnalysisUtils
 
