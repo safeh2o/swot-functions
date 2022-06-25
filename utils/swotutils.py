@@ -15,7 +15,7 @@ from pymongo import MongoClient
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Content, Mail
 
-from postprocessing import postprocess
+from .postprocessing import postprocess
 
 
 class Status(Enum):
@@ -261,7 +261,7 @@ class LocationInfo(TypedDict):
     fieldsite: str
 
 
-def get_locations_from_fieldsite_id(fieldsite_id: str, db) -> LocationInfo:
+def get_locations_from_fieldsite_id(fieldsite_id: ObjectId, db) -> LocationInfo:
     fieldsite_object = db.get_collection("fieldsites").find_one({"_id": fieldsite_id})
     fieldsite_name = fieldsite_object["name"]
     area_object = db.get_collection("areas").find_one({"fieldsites": fieldsite_id})

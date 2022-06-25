@@ -9,29 +9,12 @@
 import base64
 import mimetypes
 import os
-import sys
 
-import magic  # python-magic
 from bs4 import BeautifulSoup
 
 
-def guess_type(filepath):
-    """
-    Return the mimetype of a file, given it's path.
-
-    This is a wrapper around two alternative methods - Unix 'file'-style
-    magic which guesses the type based on file content (if available),
-    and simple guessing based on the file extension (eg .jpg).
-
-    :param filepath: Path to the file.
-    :type filepath: str
-    :return: Mimetype string.
-    :rtype: str
-    """
-    try:
-        return magic.from_file(filepath, mime=True)
-    except ImportError:
-        return mimetypes.guess_type(filepath)[0]
+def guess_type(filepath: str) -> str:
+    return mimetypes.guess_type(filepath)[0]
 
 
 def file_to_base64(filepath):
@@ -68,7 +51,3 @@ def make_html_images_inline(in_filepath, out_filepath):
 
     with open(out_filepath, "w") as of:
         of.write(str(soup))
-
-
-if __name__ == "__main__":
-    make_html_images_inline(sys.argv[1], sys.argv[2])

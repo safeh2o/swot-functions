@@ -43,8 +43,7 @@ def remove_duplicates(datapoints: list[dict]) -> list[Datapoint]:
     resolved_datapoints = []
     for datapoint in datapoints:
         latest = datapoint
-        duplicates = filter(partial(datapoint_eq, datapoint1=datapoint), datapoints)
-        # duplicates = filter(lambda x: datapoint_eq(datapoint, x), datapoints)
+        duplicates = filter(partial(datapoint_eq, datapoint2=datapoint), datapoints)
         for d in duplicates:
             if (
                 d["dateUploaded"] > latest["dateUploaded"]
@@ -77,6 +76,11 @@ def main(
         db = mongo_client.get_database()
         dataset_collection = db.get_collection("datasets")
         datapoint_collection = db.get_collection("datapoints")
+        # update status to inprogress and reset ann and eo status
+        dataset_collection.update_one(
+            {"_id": ObjectId(dataset_id)},
+            {"$set": {"status": {}, "completionStatus": "inProgress"}},
+        )
         dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
         assert isinstance(dataset, dict)
         (start_date, end_date) = (dataset["startDate"], dataset["endDate"])

@@ -1,10 +1,10 @@
+from __future__ import annotations
+
 import csv
 import logging
 import os
 import tempfile
-from io import TextIOWrapper
-from typing import Any, Dict, TextIO
-from __future__ import annotations
+from typing import Any, Dict
 from uuid import uuid4
 
 import azure.functions as func
