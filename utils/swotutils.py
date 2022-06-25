@@ -92,21 +92,21 @@ class AnalysisUtils:
                     overwrite=True,
                     content_settings=content_settings,
                 )
-            logging.info(f"uploaded file: {out_file}")
+            logging.info("uploaded file: %s", out_file)
 
     def download_src_blob(self) -> str:
         blob_client = self.blob_input_cc.get_blob_client(self.blob_name)
-        fp = NamedTemporaryFile(suffix=".csv", delete=False)
+        tmp_fp = NamedTemporaryFile(suffix=".csv", delete=False)
 
         if not blob_client.exists():
             logging.error("No blobs in the queue to process...")
             return ""
 
         # download blob and save
-        with fp as downloaded_file:
+        with tmp_fp as downloaded_file:
             downloaded_file.write(blob_client.download_blob().readall())
 
-        return os.path.realpath(fp.name)
+        return os.path.realpath(tmp_fp.name)
 
     def update_dataset(self, extra_data: dict):
         update_operation = {"$set": extra_data}
@@ -141,8 +141,8 @@ class AnalysisUtils:
         message.dynamic_template_data = {"resultsUrl": results_url}
         try:
             self.sg_client.send(message)
-        except Exception as e:
-            logging.error(e)
+        except Exception as ex:
+            logging.error(ex)
 
     def update_status(
         self,
@@ -204,7 +204,7 @@ class AnalysisUtils:
                 }
             )
             logging.info(
-                f"Sending analysis completion email for dataset {self.dataset_id}"
+                "Sending analysis completion email for dataset %s", self.dataset_id
             )
             self.send_analysis_confirmation_email()
             self.update_dataset({"isComplete": True})
@@ -261,7 +261,7 @@ class LocationInfo(TypedDict):
     fieldsite: str
 
 
-def get_locations_from_fieldsite_id(fieldsite_id: str, db) -> LocationInfo:
+def get_locations_from_fieldsite_id(fieldsite_id: ObjectId, db) -> LocationInfo:
     fieldsite_object = db.get_collection("fieldsites").find_one({"_id": fieldsite_id})
     fieldsite_name = fieldsite_object["name"]
     area_object = db.get_collection("areas").find_one({"fieldsites": fieldsite_id})

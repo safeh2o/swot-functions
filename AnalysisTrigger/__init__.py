@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import partial
 
 import json
 import logging
@@ -9,11 +10,11 @@ import azure.functions as func
 import certifi
 from bson import ObjectId
 from pymongo import MongoClient
-from utils.logging import set_logger
+from utils.loggingutils import papertrail_logger, set_logger
 from utils.standardize import Datapoint
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
-PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", 0))
+PAPERTRAIL_PORT = int(os.getenv("PAPERTRAIL_PORT", "0"))
 AZURE_STORAGE_KEY = os.getenv("AzureWebJobsStorage")
 ANALYSIS_CONTAINER_NAME = os.getenv("ANALYSIS_CONTAINER_NAME")
 RESULTS_CONTAINER_NAME = os.getenv("RESULTS_CONTAINER_NAME")
@@ -42,7 +43,7 @@ def remove_duplicates(datapoints: list[dict]) -> list[Datapoint]:
     resolved_datapoints = []
     for datapoint in datapoints:
         latest = datapoint
-        duplicates = filter(lambda x: datapoint_eq(datapoint, x), datapoints)
+        duplicates = filter(partial(datapoint_eq, datapoint2=datapoint), datapoints)
         for d in duplicates:
             if (
                 d["dateUploaded"] > latest["dateUploaded"]
@@ -61,76 +62,78 @@ def main(
     anntrigger: func.Out[str],
     eotrigger: func.Out[str],
 ) -> None:
-    # set_logger("SWOT-FUNCTIONS-ANALYSIS")
-
-    logging.info(
-        "Python queue trigger function processed a queue item: %s",
-        msg.get_body().decode("utf-8"),
-    )
-
     ca = certifi.where()
     msg_json = msg.get_json()
     dataset_id = msg_json["datasetId"]
+    with papertrail_logger(f"{dataset_id} SWOT-FUNCTIONS-ANALYSIS") as logger:
+        logger.info(
+            "Python queue trigger function processed a queue item: %s",
+            msg.get_body().decode("utf-8"),
+        )
+        mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
+            MONGODB_CONNECTION_STRING, tlsCAFile=ca
+        )
+        db = mongo_client.get_database()
+        dataset_collection = db.get_collection("datasets")
+        datapoint_collection = db.get_collection("datapoints")
+        # update status to inprogress and reset ann and eo status
+        dataset_collection.update_one(
+            {"_id": ObjectId(dataset_id)},
+            {"$set": {"status": {}, "completionStatus": "inProgress"}},
+        )
+        dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
+        assert isinstance(dataset, dict)
+        (start_date, end_date) = (dataset["startDate"], dataset["endDate"])
 
-    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
-        MONGODB_CONNECTION_STRING, tlsCAFile=ca
-    )
-    db = mongo_client.get_database()
-    dataset_collection = db.get_collection("datasets")
-    datapoint_collection = db.get_collection("datapoints")
-    dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
-    assert isinstance(dataset, dict)
-    (start_date, end_date) = (dataset["startDate"], dataset["endDate"])
+        date_filter = {"$lt": end_date}
+        if start_date:
+            date_filter["$gt"] = start_date
 
-    date_filter = {"$lt": end_date}
-    if start_date:
-        date_filter["$gt"] = start_date
+        datapoint_documents = list(
+            datapoint_collection.find(
+                {
+                    "tsDate": date_filter,
+                    "overwriting": {"$ne": None},
+                    "dateUploaded": {"$ne": None},
+                    "fieldsite": dataset["fieldsite"],
+                }
+            ).sort("tsDate", 1)
+        )
 
-    datapoint_documents = list(
-        datapoint_collection.find(
+        resolved_datapoints = remove_duplicates(datapoint_documents)
+        dataset_collection.update_one(
+            {"_id": ObjectId(dataset_id)},
             {
-                "tsDate": date_filter,
-                "overwriting": {"$ne": None},
-                "dateUploaded": {"$ne": None},
-                "fieldsite": dataset["fieldsite"],
-            }
-        ).sort("tsDate", 1)
-    )
+                "$set": {
+                    "firstSample": resolved_datapoints[0].ts_date,
+                    "lastSample": resolved_datapoints[-1].ts_date,
+                    "nSamples": len(resolved_datapoints),
+                }
+            },
+        )
+        Datapoint.add_timezones(resolved_datapoints)
+        lines = Datapoint.get_csv_lines(resolved_datapoints)
 
-    resolved_datapoints = remove_duplicates(datapoint_documents)
-    dataset_collection.update_one(
-        {"_id": ObjectId(dataset_id)},
-        {
-            "$set": {
-                "firstSample": resolved_datapoints[0].ts_date,
-                "lastSample": resolved_datapoints[-1].ts_date,
-                "nSamples": len(resolved_datapoints),
-            }
-        },
-    )
-    Datapoint.add_timezones(resolved_datapoints)
-    lines = Datapoint.get_csv_lines(resolved_datapoints)
+        output.set("\n".join(lines))
 
-    output.set("\n".join(lines))
+        analysis_parameters = {
+            "AZURE_STORAGE_KEY": AZURE_STORAGE_KEY,
+            "MONGODB_CONNECTION_STRING": MONGODB_CONNECTION_STRING,
+            "BLOB_NAME": f"{dataset_id}.csv",
+            "DATASET_ID": dataset_id,
+            "SRC_CONTAINER_NAME": ANALYSIS_CONTAINER_NAME,
+            "DEST_CONTAINER_NAME": RESULTS_CONTAINER_NAME,
+            "CONFIDENCE_LEVEL": dataset["confidenceLevel"],
+            "MAX_DURATION": dataset["maxDuration"],
+            "SENDGRID_API_KEY": SENDGRID_API_KEY,
+            "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
+            "WEBURL": WEBURL,
+            "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
+            "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
+            "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
+            "EPOCHS": os.getenv("EPOCHS"),
+            "RG_NAME": RG_NAME,
+        }
 
-    analysis_parameters = {
-        "AZURE_STORAGE_KEY": AZURE_STORAGE_KEY,
-        "MONGODB_CONNECTION_STRING": MONGODB_CONNECTION_STRING,
-        "BLOB_NAME": f"{dataset_id}.csv",
-        "DATASET_ID": dataset_id,
-        "SRC_CONTAINER_NAME": ANALYSIS_CONTAINER_NAME,
-        "DEST_CONTAINER_NAME": RESULTS_CONTAINER_NAME,
-        "CONFIDENCE_LEVEL": dataset["confidenceLevel"],
-        "MAX_DURATION": dataset["maxDuration"],
-        "SENDGRID_API_KEY": SENDGRID_API_KEY,
-        "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
-        "WEBURL": WEBURL,
-        "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
-        "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
-        "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
-        "EPOCHS": os.getenv("EPOCHS"),
-        "RG_NAME": RG_NAME,
-    }
-
-    anntrigger.set(json.dumps(analysis_parameters))
-    eotrigger.set(json.dumps(analysis_parameters))
+        anntrigger.set(json.dumps(analysis_parameters))
+        eotrigger.set(json.dumps(analysis_parameters))
