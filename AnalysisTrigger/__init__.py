@@ -65,7 +65,7 @@ def main(
     ca = certifi.where()
     msg_json = msg.get_json()
     dataset_id = msg_json["datasetId"]
-    with papertrail_logger("SWOT-FUNCTIONS-ANALYSIS") as logger:
+    with papertrail_logger(f"{dataset_id} SWOT-FUNCTIONS-ANALYSIS") as logger:
         logger.info(
             "Python queue trigger function processed a queue item: %s",
             msg.get_body().decode("utf-8"),
