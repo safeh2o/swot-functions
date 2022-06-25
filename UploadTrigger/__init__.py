@@ -35,7 +35,7 @@ def convert_xlsx_blob_to_csv(
     blob_client: BlobClient, fp: tempfile._TemporaryFileWrapper
 ):
     xlsx_fp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
-    xlsx_fp.write(blob_client.download_blob().content_as_text())
+    xlsx_fp.write(blob_client.download_blob().readall())
     xlsx_fp.close()
 
     wb = openpyxl.load_workbook(xlsx_fp.name, read_only=True, data_only=True)
