@@ -66,16 +66,16 @@ def main(msg: func.QueueMessage) -> None:
 
         MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
         AZURE_STORAGE_CONNECTION_STRING = os.getenv("AzureWebJobsStorage", "")
-        COLLECTION_NAME = os.getenv("COLLECTION_NAME", "")
+        UPLOAD_COLLECTION_NAME = os.getenv("UPLOAD_COLLECTION_NAME", "")
 
         mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
             MONGODB_CONNECTION_STRING, tlsCAFile=ca
         )
         db = mongo_client.get_database()
-        col = db.get_collection(COLLECTION_NAME)
+        col = db.get_collection(UPLOAD_COLLECTION_NAME)
         upl = col.find_one({"_id": ObjectId(upload_id)})
         if not upl:
-            raise ModelNotFound(upload_id, COLLECTION_NAME)
+            raise ModelNotFound(upload_id, UPLOAD_COLLECTION_NAME)
         col.update_one({"_id": ObjectId(upload_id)}, {"$set": {"status": "processing"}})
 
         fieldsite_id = upl["fieldsite"]
