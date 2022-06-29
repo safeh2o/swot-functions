@@ -5,12 +5,14 @@ import traceback
 
 import azure.functions as func
 import matplotlib as mpl
+from matplotlib import pyplot as plt
 from swoteo.EO_ens_SWOT import EO_Ensemble
 from utils.loggingutils import papertrail_logger, set_logger
 from utils.standalone_html import make_html_images_inline
 from utils.swotutils import AnalysisMethod, AnalysisUtils
 
 mpl.use("agg")
+plt.ioff()
 
 ANALYSIS_METHOD = AnalysisMethod.EO
 
