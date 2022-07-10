@@ -14,8 +14,8 @@ sendgrid
 certifi
 
 # ann/eo requirements
-numpy
-pandas
+numpy==1.21.0
+pandas==1.4.2
 git+https://github.com/safeh2o/swot-python-analysis@master
 beautifulsoup4
 git+https://github.com/safeh2o/swot_eo_python_analysis@master
