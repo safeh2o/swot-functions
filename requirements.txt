@@ -5,18 +5,18 @@
 
 azure-functions
 
-pymongo
-azure-storage-blob
-black
-openpyxl
-dnspython
-sendgrid
-certifi
+pymongo==4.1.1
+azure-storage-blob==12.13.0
+black==22.6.0
+openpyxl==3.0.10
+dnspython==2.2.1
+sendgrid==6.9.7
+certifi==2022.6.15
 
 # ann/eo requirements
 numpy==1.21.0
 pandas==1.4.2
+beautifulsoup4==4.11.1
 git+https://github.com/safeh2o/swot-python-analysis@master
-beautifulsoup4
 git+https://github.com/safeh2o/swot_eo_python_analysis@master
 

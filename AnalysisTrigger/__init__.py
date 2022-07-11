@@ -139,4 +139,4 @@ def main(
         }
 
         anntrigger.set(json.dumps(analysis_parameters))
-        # eotrigger.set(json.dumps(analysis_parameters))
+        eotrigger.set(json.dumps(analysis_parameters))
