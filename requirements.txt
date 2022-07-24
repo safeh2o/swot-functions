@@ -19,4 +19,3 @@ pandas==1.4.2
 beautifulsoup4==4.11.1
 git+https://github.com/safeh2o/swot-python-analysis@master
 git+https://github.com/safeh2o/swot_eo_python_analysis@master
-

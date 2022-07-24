@@ -1,16 +1,15 @@
 from __future__ import annotations
-from functools import partial
 
 import json
 import logging
 import os
+from functools import partial
 from typing import Any, Dict
 
 import azure.functions as func
 import certifi
 from bson import ObjectId
 from pymongo import MongoClient
-from utils.loggingutils import papertrail_logger, set_logger
 from utils.standardize import Datapoint
 
 PAPERTRAIL_ADDRESS = os.getenv("PAPERTRAIL_ADDRESS")
@@ -65,78 +64,77 @@ def main(
     ca = certifi.where()
     msg_json = msg.get_json()
     dataset_id = msg_json["datasetId"]
-    with papertrail_logger(f"{dataset_id} SWOT-FUNCTIONS-ANALYSIS") as logger:
-        logger.info(
-            "Python queue trigger function processed a queue item: %s",
-            msg.get_body().decode("utf-8"),
-        )
-        mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
-            MONGODB_CONNECTION_STRING, tlsCAFile=ca
-        )
-        db = mongo_client.get_database()
-        dataset_collection = db.get_collection("datasets")
-        datapoint_collection = db.get_collection("datapoints")
-        # update status to inprogress and reset ann and eo status
-        dataset_collection.update_one(
-            {"_id": ObjectId(dataset_id)},
-            {"$set": {"status": {}, "completionStatus": "inProgress"}},
-        )
-        dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
-        assert isinstance(dataset, dict)
-        (start_date, end_date) = (dataset["startDate"], dataset["endDate"])
+    logging.info(
+        "Python queue trigger function processed a queue item: %s",
+        msg.get_body().decode("utf-8"),
+    )
+    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
+        MONGODB_CONNECTION_STRING, tlsCAFile=ca
+    )
+    db = mongo_client.get_database()
+    dataset_collection = db.get_collection("datasets")
+    datapoint_collection = db.get_collection("datapoints")
+    # update status to inprogress and reset ann and eo status
+    dataset_collection.update_one(
+        {"_id": ObjectId(dataset_id)},
+        {"$set": {"status": {}, "completionStatus": "inProgress"}},
+    )
+    dataset = dataset_collection.find_one({"_id": ObjectId(dataset_id)})
+    assert isinstance(dataset, dict)
+    (start_date, end_date) = (dataset["startDate"], dataset["endDate"])
 
-        date_filter = {"$lt": end_date}
-        if start_date:
-            date_filter["$gt"] = start_date
+    date_filter = {"$lt": end_date}
+    if start_date:
+        date_filter["$gt"] = start_date
 
-        datapoint_documents = list(
-            datapoint_collection.find(
-                {
-                    "tsDate": date_filter,
-                    "overwriting": {"$ne": None},
-                    "dateUploaded": {"$ne": None},
-                    "fieldsite": dataset["fieldsite"],
-                }
-            ).sort("tsDate", 1)
-        )
-
-        resolved_datapoints = remove_duplicates(datapoint_documents)
-        dataset_collection.update_one(
-            {"_id": ObjectId(dataset_id)},
+    datapoint_documents = list(
+        datapoint_collection.find(
             {
-                "$set": {
-                    "firstSample": resolved_datapoints[0].ts_date,
-                    "lastSample": resolved_datapoints[-1].ts_date,
-                    "nSamples": len(resolved_datapoints),
-                }
-            },
-        )
-        Datapoint.add_timezones(resolved_datapoints)
-        lines = Datapoint.get_csv_lines(resolved_datapoints)
+                "tsDate": date_filter,
+                "overwriting": {"$ne": None},
+                "dateUploaded": {"$ne": None},
+                "fieldsite": dataset["fieldsite"],
+            }
+        ).sort("tsDate", 1)
+    )
 
-        output.set("\n".join(lines))
+    resolved_datapoints = remove_duplicates(datapoint_documents)
+    dataset_collection.update_one(
+        {"_id": ObjectId(dataset_id)},
+        {
+            "$set": {
+                "firstSample": resolved_datapoints[0].ts_date,
+                "lastSample": resolved_datapoints[-1].ts_date,
+                "nSamples": len(resolved_datapoints),
+            }
+        },
+    )
+    Datapoint.add_timezones(resolved_datapoints)
+    lines = Datapoint.get_csv_lines(resolved_datapoints)
 
-        analysis_parameters = {
-            "AZURE_STORAGE_KEY": AZURE_STORAGE_KEY,
-            "MONGODB_CONNECTION_STRING": MONGODB_CONNECTION_STRING,
-            "BLOB_NAME": f"{dataset_id}.csv",
-            "DATASET_ID": dataset_id,
-            "SRC_CONTAINER_NAME": ANALYSIS_CONTAINER_NAME,
-            "DEST_CONTAINER_NAME": RESULTS_CONTAINER_NAME,
-            "CONFIDENCE_LEVEL": dataset["confidenceLevel"],
-            "MAX_DURATION": dataset["maxDuration"],
-            "SENDGRID_API_KEY": SENDGRID_API_KEY,
-            "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
-            "WEBURL": WEBURL,
-            "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
-            "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
-            "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
-            "EPOCHS": os.getenv("EPOCHS"),
-            "RG_NAME": RG_NAME,
-            "ERROR_RECEPIENT_EMAIL": os.getenv(
-                "ERROR_RECEPIENT_EMAIL", f"errors+{RG_NAME}@safeh2o.app"
-            ),
-        }
+    output.set("\n".join(lines))
 
-        anntrigger.set(json.dumps(analysis_parameters))
-        eotrigger.set(json.dumps(analysis_parameters))
+    analysis_parameters = {
+        "AZURE_STORAGE_KEY": AZURE_STORAGE_KEY,
+        "MONGODB_CONNECTION_STRING": MONGODB_CONNECTION_STRING,
+        "BLOB_NAME": f"{dataset_id}.csv",
+        "DATASET_ID": dataset_id,
+        "SRC_CONTAINER_NAME": ANALYSIS_CONTAINER_NAME,
+        "DEST_CONTAINER_NAME": RESULTS_CONTAINER_NAME,
+        "CONFIDENCE_LEVEL": dataset["confidenceLevel"],
+        "MAX_DURATION": dataset["maxDuration"],
+        "SENDGRID_API_KEY": SENDGRID_API_KEY,
+        "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID,
+        "WEBURL": WEBURL,
+        "PAPERTRAIL_ADDRESS": PAPERTRAIL_ADDRESS,
+        "PAPERTRAIL_PORT": PAPERTRAIL_PORT,
+        "NETWORK_COUNT": os.getenv("NETWORK_COUNT"),
+        "EPOCHS": os.getenv("EPOCHS"),
+        "RG_NAME": RG_NAME,
+        "ERROR_RECEPIENT_EMAIL": os.getenv(
+            "ERROR_RECEPIENT_EMAIL", f"errors+{RG_NAME}@safeh2o.app"
+        ),
+    }
+
+    anntrigger.set(json.dumps(analysis_parameters))
+    eotrigger.set(json.dumps(analysis_parameters))
