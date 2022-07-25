@@ -14,7 +14,7 @@
   },
   "extensions": {
     "queues": {
-      "maxDequeueCount": 1
+      "maxDequeueCount": 5
     }
   },
   "functionTimeout": "-1"
