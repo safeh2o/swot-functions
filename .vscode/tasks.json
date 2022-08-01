@@ -2,24 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build eo",
-      "type": "docker-build",
-      "dockerBuild": {
-        "context": "${workspaceFolder}",
-        "dockerfile": "${workspaceFolder}/containers/eo/Dockerfile",
-        "tag": "${config:containers.registryName}/servereo:latest"
-      }
-    },
-    {
-      "label": "build ann",
-      "type": "docker-build",
-      "dockerBuild": {
-        "context": "${workspaceFolder}",
-        "dockerfile": "${workspaceFolder}/containers/ann/Dockerfile",
-        "tag": "${config:containers.registryName}/serverann:latest"
-      }
-    },
-    {
       "label": "build fx",
       "type": "docker-build",
       "dockerBuild": {
@@ -42,35 +24,6 @@
       ]
     },
     {
-      "label": "push ann",
-      "type": "shell",
-      "command": "docker push ${config:containers.registryName}/serverann",
-      "dependsOn": [
-        "acr login"
-      ]
-    },
-    {
-      "label": "push eo",
-      "type": "shell",
-      "command": "docker push ${config:containers.registryName}/servereo",
-      "dependsOn": [
-        "acr login"
-      ]
-    },
-    {
-      "label": "build and push",
-      "type": "shell",
-      "command": "echo Built and pushed containers...",
-      "dependsOn": [
-        "build ann",
-        "build eo",
-        "push ann",
-        "push eo"
-      ],
-      "dependsOrder": "sequence",
-      "problemMatcher": []
-    },
-    {
       "label": "cd fx",
       "type": "shell",
       "command": "echo Built and pushed function...",
@@ -80,51 +33,6 @@
       ],
       "dependsOrder": "sequence",
       "problemMatcher": []
-    },
-    {
-      "label": "test eo",
-      "type": "docker-run",
-      "dockerRun": {
-        "image": "${config:containers.registryName}/servereo",
-        "env": {
-          "AZURE_STORAGE_KEY": "${config:containers.env.AZURE_STORAGE_KEY}",
-          "MONGODB_CONNECTION_STRING": "${config:containers.env.MONGODB_CONNECTION_STRING}",
-          "SRC_CONTAINER_NAME": "${config:containers.env.SRC_CONTAINER_NAME}",
-          "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
-          "DATASET_ID": "${config:containers.env.DATASET_ID}",
-          "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
-          "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
-          "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
-          "WEBURL": "${config:containers.env.WEBURL}",
-          "PAPERTRAIL_ADDRESS": "${config:containers.env.PAPERTRAIL_ADDRESS}",
-          "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
-          "CONFIDENCE_LEVEL": "minDecay",
-          "MAX_DURATION": "3"
-        }
-      }
-    },
-    {
-      "label": "test ann",
-      "type": "docker-run",
-      "dockerRun": {
-        "image": "${config:containers.registryName}/serverann",
-        "env": {
-          "AZURE_STORAGE_KEY": "${config:containers.env.AZURE_STORAGE_KEY}",
-          "MONGODB_CONNECTION_STRING": "${config:containers.env.MONGODB_CONNECTION_STRING}",
-          "SRC_CONTAINER_NAME": "${config:containers.env.SRC_CONTAINER_NAME}",
-          "DEST_CONTAINER_NAME": "${config:containers.env.DEST_CONTAINER_NAME}",
-          "DATASET_ID": "${config:containers.env.DATASET_ID}",
-          "BLOB_NAME": "${config:containers.env.BLOB_NAME}",
-          "SENDGRID_API_KEY": "${config:containers.env.SENDGRID_API_KEY}",
-          "SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID": "${config:containers.env.SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID}",
-          "WEBURL": "${config:containers.env.WEBURL}",
-          "PAPERTRAIL_ADDRESS": "${config:containers.env.PAPERTRAIL_ADDRESS}",
-          "PAPERTRAIL_PORT": "${config:containers.env.PAPERTRAIL_PORT}",
-          "NETWORK_COUNT": "5",
-          "EPOCHS": "100",
-          "MAX_DURATION": "3"
-        }
-      }
     },
     {
       "type": "func",
