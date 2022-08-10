@@ -71,6 +71,7 @@ class AnalysisUtils:
         self.confidence_level = confidence_level
         self.rg_name = rg_name
         self.error_recepient = error_recepient
+        self.locations = get_locations_from_fieldsite_id(self.get_fieldsite_id())
 
     def upload_files(self, directory_name: str, file_paths: list[str]):
         for out_file in file_paths:
@@ -128,10 +129,14 @@ class AnalysisUtils:
     def send_analysis_confirmation_email(self):
         user = self.get_user()
         results_url = f"{self.weburl}/results/{self.dataset_id}"
+        fieldsite_name = self.locations["fieldsite"]
 
         message = Mail(from_email="no-reply@safeh2o.app", to_emails=user["email"])
         message.template_id = self.sg_template_id
-        message.dynamic_template_data = {"resultsUrl": results_url}
+        message.dynamic_template_data = {
+            "resultsUrl": results_url,
+            "fieldsiteName": fieldsite_name,
+        }
         try:
             self.sg_client.send(message)
         except Exception as ex:
@@ -203,11 +208,9 @@ class AnalysisUtils:
             self.update_dataset({"isComplete": True})
 
     def send_error_email(self, method: AnalysisMethod, message: str):
-        fieldsite_id = self.get_fieldsite()
-        locations = get_locations_from_fieldsite_id(fieldsite_id, self.db)
-        country_name = locations["country"]
-        area_name = locations["area"]
-        fieldsite_name = locations["fieldsite"]
+        country_name = self.locations["country"]
+        area_name = self.locations["area"]
+        fieldsite_name = self.locations["fieldsite"]
         user = self.get_user()
         user_fullname = f'{user["name"]["first"]} {user["name"]["last"]}'
         user_email = user["email"]
@@ -243,7 +246,7 @@ class AnalysisUtils:
         )
         self.sg_client.send(email)
 
-    def get_fieldsite(self):
+    def get_fieldsite_id(self):
         dataset = self.get_dataset()
         return dataset["fieldsite"]
 
