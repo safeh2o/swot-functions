@@ -6,11 +6,11 @@ import os
 from datetime import datetime
 from enum import Enum
 from tempfile import NamedTemporaryFile
-from typing import TypedDict
-
+from typing import Dict, TypedDict, Any
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
+from pymongo.database import Database
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Content, Mail
 
@@ -71,7 +71,9 @@ class AnalysisUtils:
         self.confidence_level = confidence_level
         self.rg_name = rg_name
         self.error_recepient = error_recepient
-        self.locations = get_locations_from_fieldsite_id(self.get_fieldsite_id())
+        self.locations = get_locations_from_fieldsite_id(
+            self.get_fieldsite_id(), self.db
+        )
 
     def upload_files(self, directory_name: str, file_paths: list[str]):
         for out_file in file_paths:
@@ -257,7 +259,9 @@ class LocationInfo(TypedDict):
     fieldsite: str
 
 
-def get_locations_from_fieldsite_id(fieldsite_id: ObjectId, db) -> LocationInfo:
+def get_locations_from_fieldsite_id(
+    fieldsite_id: ObjectId, db: Database[Dict[str, Any]]
+) -> LocationInfo:
     fieldsite_object = db.get_collection("fieldsites").find_one({"_id": fieldsite_id})
     fieldsite_name = fieldsite_object["name"]
     area_object = db.get_collection("areas").find_one({"fieldsites": fieldsite_id})
