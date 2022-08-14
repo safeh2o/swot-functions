@@ -18,5 +18,5 @@ certifi==2022.6.15
 numpy==1.22.0
 pandas==1.4.2
 beautifulsoup4==4.11.1
-git+https://github.com/safeh2o/swot-python-analysis@master
-git+https://github.com/safeh2o/swot_eo_python_analysis@master
+git+https://github.com/safeh2o/swot-ann@master
+git+https://github.com/safeh2o/swot-eo@master
