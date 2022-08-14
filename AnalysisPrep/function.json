@@ -1,0 +1,18 @@
+{
+  "scriptFile": "__init__.py",
+  "bindings": [
+    {
+      "name": "msg",
+      "type": "activityTrigger",
+      "direction": "in"
+    },
+    {
+      "dataType": "string",
+      "direction": "out",
+      "name": "output",
+      "type": "blob",
+      "connection": "AzureWebJobsStorage",
+      "path": "%ANALYSIS_CONTAINER_NAME%/{datasetId}.csv"
+    }
+  ]
+}

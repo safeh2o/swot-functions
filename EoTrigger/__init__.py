@@ -1,10 +1,8 @@
-import json
 import logging
 import os
 import tempfile
 import traceback
 
-import azure.functions as func
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from swoteo.EO_ens_SWOT import EO_Ensemble
@@ -17,30 +15,28 @@ plt.ioff()
 ANALYSIS_METHOD = AnalysisMethod.EO
 
 
-def main(msg: func.QueueMessage) -> None:
-    decoded_msg = msg.get_body().decode("utf-8")
-    analysis_parameters = json.loads(decoded_msg)
-    dataset_id = analysis_parameters["DATASET_ID"]
+def main(msg: dict) -> None:
+    dataset_id = msg["DATASET_ID"]
 
     logging.info(
-        "Python queue trigger function processed a queue item: %s",
-        decoded_msg,
+        "In EO Trigger: %s",
+        msg,
     )
 
     controller = AnalysisUtils(
-        analysis_parameters["AZURE_STORAGE_KEY"],
-        analysis_parameters["MONGODB_CONNECTION_STRING"],
+        msg["AZURE_STORAGE_KEY"],
+        msg["MONGODB_CONNECTION_STRING"],
         dataset_id,
-        analysis_parameters["SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"],
-        analysis_parameters["SENDGRID_API_KEY"],
-        analysis_parameters["WEBURL"],
-        analysis_parameters["DEST_CONTAINER_NAME"],
-        analysis_parameters["SRC_CONTAINER_NAME"],
-        analysis_parameters["BLOB_NAME"],
-        analysis_parameters["MAX_DURATION"],
-        analysis_parameters["CONFIDENCE_LEVEL"],
-        analysis_parameters["RG_NAME"],
-        analysis_parameters["ERROR_RECEPIENT_EMAIL"],
+        msg["SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"],
+        msg["SENDGRID_API_KEY"],
+        msg["WEBURL"],
+        msg["DEST_CONTAINER_NAME"],
+        msg["SRC_CONTAINER_NAME"],
+        msg["BLOB_NAME"],
+        msg["MAX_DURATION"],
+        msg["CONFIDENCE_LEVEL"],
+        msg["RG_NAME"],
+        msg["ERROR_RECEPIENT_EMAIL"],
     )
 
     success = True
@@ -57,6 +53,8 @@ def main(msg: func.QueueMessage) -> None:
         controller.send_error_email(ANALYSIS_METHOD, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
+
+    return "Done EO"
 
 
 def process_queue(controller: AnalysisUtils):

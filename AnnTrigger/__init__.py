@@ -1,10 +1,8 @@
-import json
 import logging
 import os
 import tempfile
 import traceback
 
-import azure.functions as func
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from swotann.nnetwork import NNetwork
@@ -18,32 +16,29 @@ plt.ioff()
 ANALYSIS_METHOD = swotutils.AnalysisMethod.ANN
 
 
-def main(msg: func.QueueMessage) -> None:
-    decoded_msg = msg.get_body().decode("utf-8")
-    analysis_parameters = json.loads(decoded_msg)
-    network_count = analysis_parameters.get("NETWORK_COUNT")
-    epochs = analysis_parameters.get("EPOCHS")
-    dataset_id = analysis_parameters.get("DATASET_ID")
+def main(msg: dict) -> None:
+    network_count = msg.get("NETWORK_COUNT")
+    epochs = msg.get("EPOCHS")
 
     logging.info(
-        "Python queue trigger function processed a queue item: %s",
-        decoded_msg,
+        "In ANN Trigger: %s",
+        msg,
     )
 
     controller = AnalysisUtils(
-        analysis_parameters["AZURE_STORAGE_KEY"],
-        analysis_parameters["MONGODB_CONNECTION_STRING"],
-        dataset_id,
-        analysis_parameters["SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"],
-        analysis_parameters["SENDGRID_API_KEY"],
-        analysis_parameters["WEBURL"],
-        analysis_parameters["DEST_CONTAINER_NAME"],
-        analysis_parameters["SRC_CONTAINER_NAME"],
-        analysis_parameters["BLOB_NAME"],
-        analysis_parameters["MAX_DURATION"],
-        analysis_parameters["CONFIDENCE_LEVEL"],
-        analysis_parameters["RG_NAME"],
-        analysis_parameters["ERROR_RECEPIENT_EMAIL"],
+        msg["AZURE_STORAGE_KEY"],
+        msg["MONGODB_CONNECTION_STRING"],
+        msg["DATASET_ID"],
+        msg["SENDGRID_ANALYSIS_COMPLETION_TEMPLATE_ID"],
+        msg["SENDGRID_API_KEY"],
+        msg["WEBURL"],
+        msg["DEST_CONTAINER_NAME"],
+        msg["SRC_CONTAINER_NAME"],
+        msg["BLOB_NAME"],
+        msg["MAX_DURATION"],
+        msg["CONFIDENCE_LEVEL"],
+        msg["RG_NAME"],
+        msg["ERROR_RECEPIENT_EMAIL"],
     )
 
     success = True
@@ -52,9 +47,7 @@ def main(msg: func.QueueMessage) -> None:
         message = "OK"
     except Exception as ex:
         message = "".join(
-            traceback.format_exception(
-                etype=type(ex), value=ex, tb=ex.__traceback__
-            )
+            traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)
         )
         success = False
         logging.error(message)
@@ -62,6 +55,8 @@ def main(msg: func.QueueMessage) -> None:
         controller.send_error_email(AnalysisMethod.ANN, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
+
+    return "Done ANN"
 
 
 def process_queue(controller: AnalysisUtils, network_count: int, epochs: int):

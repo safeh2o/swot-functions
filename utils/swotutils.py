@@ -6,7 +6,8 @@ import os
 from datetime import datetime
 from enum import Enum
 from tempfile import NamedTemporaryFile
-from typing import Dict, TypedDict, Any
+from typing import Any, Dict, TypedDict
+
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
@@ -160,54 +161,52 @@ class AnalysisUtils:
             },
         )
 
-        if self.is_all_analysis_complete():
-            dataset = self.get_dataset()
-            frc_target = dataset["eo"]["reco"]
-            case_blobpaths = []
-            for case in ["worst", "average"]:
-                for timing in ["am", "pm"]:
-                    case_blobpaths.append(
-                        f"{self.dataset_id}/{self.dataset_id}_{case}_case_{timing}.csv"
-                    )
-            case_filepaths = []
-            for case_blob in case_blobpaths:
-                fp = NamedTemporaryFile(suffix=".csv", delete=False)
-                fp.write(
-                    self.blob_result_cc.get_blob_client(case_blob)
-                    .download_blob()
-                    .readall()
+    def postprocess(self):
+        dataset = self.get_dataset()
+        frc_target = dataset["eo"]["reco"]
+        case_blobpaths = []
+        for case in ["worst", "average"]:
+            for timing in ["am", "pm"]:
+                case_blobpaths.append(
+                    f"{self.dataset_id}/{self.dataset_id}_{case}_case_{timing}.csv"
                 )
-                fp.flush()
-                case_filepaths.append(fp.name)
-
-            input_filepath = self.download_src_blob()
-
-            water_safety = postprocess(
-                frc_target=frc_target,
-                case_filepaths=case_filepaths,
-                input_file=input_filepath,
+        case_filepaths = []
+        for case_blob in case_blobpaths:
+            fp = NamedTemporaryFile(suffix=".csv", delete=False)
+            fp.write(
+                self.blob_result_cc.get_blob_client(case_blob).download_blob().readall()
             )
+            fp.flush()
+            case_filepaths.append(fp.name)
 
-            if (
-                dataset["status"][AnalysisMethod.ANN.value]["success"]
-                and dataset["status"][AnalysisMethod.EO.value]["success"]
-            ):
-                completion_status = "complete"
-            else:
-                completion_status = "failed"
+        input_filepath = self.download_src_blob()
 
-            self.update_dataset(
-                {
-                    "safety_range": water_safety["safety_range"],
-                    "safe_percent": water_safety["safe_percent"],
-                    "completionStatus": completion_status,
-                }
-            )
-            logging.info(
-                "Sending analysis completion email for dataset %s", self.dataset_id
-            )
-            self.send_analysis_confirmation_email()
-            self.update_dataset({"isComplete": True})
+        water_safety = postprocess(
+            frc_target=frc_target,
+            case_filepaths=case_filepaths,
+            input_file=input_filepath,
+        )
+
+        if (
+            dataset["status"][AnalysisMethod.ANN.value]["success"]
+            and dataset["status"][AnalysisMethod.EO.value]["success"]
+        ):
+            completion_status = "complete"
+        else:
+            completion_status = "failed"
+
+        self.update_dataset(
+            {
+                "safety_range": water_safety["safety_range"],
+                "safe_percent": water_safety["safe_percent"],
+                "completionStatus": completion_status,
+            }
+        )
+        logging.info(
+            "Sending analysis completion email for dataset %s", self.dataset_id
+        )
+        self.send_analysis_confirmation_email()
+        self.update_dataset({"isComplete": True})
 
     def send_error_email(self, method: AnalysisMethod, message: str):
         country_name = self.locations["country"]

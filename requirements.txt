@@ -4,6 +4,7 @@
 
 
 azure-functions
+azure-functions-durable
 
 pymongo==4.1.1
 azure-storage-blob==12.13.0

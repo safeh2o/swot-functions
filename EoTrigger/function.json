@@ -3,10 +3,8 @@
   "bindings": [
     {
       "name": "msg",
-      "type": "queueTrigger",
-      "direction": "in",
-      "queueName": "%EO_QUEUE_NAME%",
-      "connection": "AzureWebJobsStorage"
+      "type": "activityTrigger",
+      "direction": "in"
     }
   ]
 }
