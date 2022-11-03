@@ -87,6 +87,7 @@ def process_queue(controller: AnalysisUtils, network_count: int, epochs: int):
             results_filepath,
             report_filepath,
             controller.max_duration,
+            True
         )
         controller.update_dataset({"ann": metadata})
 
