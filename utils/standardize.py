@@ -206,7 +206,12 @@ def format_unknown_date(date_string: str):
             + timedelta(days=float(date_string))
         )
     except ValueError:
+        pass
+
+    try:
         return format_plain_date(date_string)
+    except:
+        return None
 
 
 def format_plain_date(date_string: str):
