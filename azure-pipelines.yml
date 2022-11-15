@@ -1,31 +1,31 @@
 # Build and push functions image to container registry
 # This pipeline currently exists because there is no current support for GitHub integration triggers straight from a Release pipeline, so we're using an artifact trigger instead
 
-trigger: [master, prod]
+trigger: [main, prod]
 pr: none
 
 variables:
-    vmImageName: "ubuntu-latest"
+  vmImageName: 'ubuntu-latest'
 
 stages:
-    - stage: Build
-      displayName: Create Artifact
-      jobs:
-          - job: Build
-            displayName: Create Artifact
-            pool:
-                vmImage: $(vmImageName)
-            steps:
-                - task: ArchiveFiles@2
-                  inputs:
-                    rootFolderOrFile: '$(Build.SourcesDirectory)'
-                    includeRootFolder: true
-                    archiveType: 'zip'
-                    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-                    replaceExistingArchive: true
-                - task: PublishPipelineArtifact@1
-                  displayName: Publish Artifacts
-                  inputs:
-                      targetPath: "$(Build.ArtifactStagingDirectory)"
-                      publishLocation: "pipeline"
-                      artifact: $(Build.BuildId)
+  - stage: Build
+    displayName: Create Artifact
+    jobs:
+      - job: Build
+        displayName: Create Artifact
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(Build.SourcesDirectory)'
+              includeRootFolder: true
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+              replaceExistingArchive: true
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Artifacts
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)'
+              publishLocation: 'pipeline'
+              artifact: $(Build.BuildId)
