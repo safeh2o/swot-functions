@@ -42,13 +42,11 @@ def main(msg: dict) -> None:
     )
 
     success = True
+    message = "OK"
     try:
         process_queue(controller, network_count, epochs)
-        message = "OK"
     except Exception as ex:
-        message = "".join(
-            traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)
-        )
+        message = "".join(traceback.format_exception(ex))
         success = False
         logging.error(message)
 
@@ -87,7 +85,7 @@ def process_queue(controller: AnalysisUtils, network_count: int, epochs: int):
             results_filepath,
             report_filepath,
             controller.max_duration,
-            True
+            True,
         )
         controller.update_dataset({"ann": metadata})
 

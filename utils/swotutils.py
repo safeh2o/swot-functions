@@ -15,7 +15,7 @@ from pymongo.database import Database
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Content, Mail
 
-from .postprocessing import postprocess
+from .postprocessing import get_water_safety
 
 
 class Status(Enum):
@@ -83,6 +83,8 @@ class AnalysisUtils:
                 filepath = os.path.join(directory_name, basename)
                 (content_type, content_encoding) = mimetypes.guess_type(out_file)
                 content_settings = ContentSettings(content_type, content_encoding)
+                if not self.blob_result_cc.exists():
+                    self.blob_result_cc.create_container()
                 self.blob_result_cc.upload_blob(
                     filepath,
                     data=out_fp,
@@ -163,7 +165,17 @@ class AnalysisUtils:
 
     def postprocess(self):
         dataset = self.get_dataset()
-        frc_target = dataset["eo"]["reco"]
+        completion_status = "failed"
+        try:
+            frc_target = dataset["eo"]["reco"]
+            if (
+                dataset["status"][AnalysisMethod.ANN.value]["success"]
+                and dataset["status"][AnalysisMethod.EO.value]["success"]
+            ):
+                completion_status = "complete"
+        except KeyError:
+            frc_target = None
+
         case_blobpaths = []
         for case in ["worst", "average"]:
             for timing in ["am", "pm"]:
@@ -181,24 +193,16 @@ class AnalysisUtils:
 
         input_filepath = self.download_src_blob()
 
-        water_safety = postprocess(
+        water_safety = get_water_safety(
             frc_target=frc_target,
             case_filepaths=case_filepaths,
             input_file=input_filepath,
         )
 
-        if (
-            dataset["status"][AnalysisMethod.ANN.value]["success"]
-            and dataset["status"][AnalysisMethod.EO.value]["success"]
-        ):
-            completion_status = "complete"
-        else:
-            completion_status = "failed"
-
         self.update_dataset(
             {
-                "safety_range": water_safety["safety_range"],
-                "safe_percent": water_safety["safe_percent"],
+                "safety_range": water_safety.get("safety_range"),
+                "safe_percent": water_safety.get("safe_percent"),
                 "completionStatus": completion_status,
             }
         )
@@ -206,7 +210,6 @@ class AnalysisUtils:
             "Sending analysis completion email for dataset %s", self.dataset_id
         )
         self.send_analysis_confirmation_email()
-        self.update_dataset({"isComplete": True})
 
     def send_error_email(self, method: AnalysisMethod, message: str):
         country_name = self.locations["country"]

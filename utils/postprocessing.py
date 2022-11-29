@@ -25,12 +25,14 @@ def get_risk(frc_target, ann_frames):
     return safety_range
 
 
-def postprocess(frc_target, case_filepaths, input_file):
+def get_water_safety(frc_target, case_filepaths, input_file):
     ann_frames = []
     for f in case_filepaths:
         ann_frames.append(pd.read_csv(f))
     input_df = pd.read_csv(input_file)
-    safety_range = get_risk(frc_target, ann_frames)
+    safety_range = None
+    if frc_target is not None:
+        safety_range = get_risk(frc_target, ann_frames)
     safe_percent = get_current_safety(input_df)
 
     return {"safety_range": safety_range, "safe_percent": safe_percent}

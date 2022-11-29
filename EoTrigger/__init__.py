@@ -40,13 +40,11 @@ def main(msg: dict) -> None:
     )
 
     success = True
+    message = "OK"
     try:
         process_queue(controller)
-        message = "OK"
     except Exception as ex:
-        message = "".join(
-            traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)
-        )
+        message = "".join(traceback.format_exception(ex))
         success = False
         logging.error(message)
 
