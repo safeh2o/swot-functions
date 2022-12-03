@@ -277,7 +277,7 @@ class AnalysisUtils:
         error_message = self.get_error_message(message, analysis_method)
 
         self.send_error_email(analysis_method, error_message)
-        if os.getenv("ENABLE_SLACK_NOTIFICATIONS", False):
+        if int(os.getenv("ENABLE_SLACK_NOTIFICATIONS", '0')):
             self.send_slack_message(error_message)
 
     def get_fieldsite_id(self):
