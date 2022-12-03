@@ -18,4 +18,5 @@ def main(msg: dict) -> str:
         msg["ERROR_RECEPIENT_EMAIL"],
     )
     controller.postprocess()
+
     return "Done postprocessing"

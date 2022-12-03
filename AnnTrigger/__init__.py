@@ -50,7 +50,7 @@ def main(msg: dict) -> None:
         success = False
         logging.error(message)
 
-        controller.send_error_email(AnalysisMethod.ANN, message)
+        controller.handle_error(AnalysisMethod.ANN, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
 

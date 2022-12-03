@@ -48,7 +48,7 @@ def main(msg: dict) -> None:
         success = False
         logging.error(message)
 
-        controller.send_error_email(ANALYSIS_METHOD, message)
+        controller.handle_error(AnalysisMethod.EO, message)
     finally:
         controller.update_status(ANALYSIS_METHOD, success, message)
 

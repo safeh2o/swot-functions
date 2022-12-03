@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import mimetypes
 import os
@@ -8,6 +9,7 @@ from enum import Enum
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, TypedDict
 
+import requests
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from bson import ObjectId
 from pymongo import MongoClient
@@ -166,38 +168,42 @@ class AnalysisUtils:
     def postprocess(self):
         dataset = self.get_dataset()
         completion_status = "failed"
+        ann_passed = False
+        eo_passed = False
+        water_safety = {}
         try:
+            ann_passed = dataset["status"][AnalysisMethod.ANN.value]["success"] or False
+            eo_passed = dataset["status"][AnalysisMethod.EO.value]["success"] or False
             frc_target = dataset["eo"]["reco"]
-            if (
-                dataset["status"][AnalysisMethod.ANN.value]["success"]
-                and dataset["status"][AnalysisMethod.EO.value]["success"]
-            ):
-                completion_status = "complete"
         except KeyError:
             frc_target = None
 
-        case_blobpaths = []
-        for case in ["worst", "average"]:
-            for timing in ["am", "pm"]:
-                case_blobpaths.append(
-                    f"{self.dataset_id}/{self.dataset_id}_{case}_case_{timing}.csv"
+        if ann_passed and eo_passed:
+            completion_status = "complete"
+            case_blobpaths = []
+            for case in ["worst", "average"]:
+                for timing in ["am", "pm"]:
+                    case_blobpaths.append(
+                        f"{self.dataset_id}/{self.dataset_id}_{case}_case_{timing}.csv"
+                    )
+            case_filepaths = []
+            for case_blob in case_blobpaths:
+                fp = NamedTemporaryFile(suffix=".csv", delete=False)
+                fp.write(
+                    self.blob_result_cc.get_blob_client(case_blob)
+                    .download_blob()
+                    .readall()
                 )
-        case_filepaths = []
-        for case_blob in case_blobpaths:
-            fp = NamedTemporaryFile(suffix=".csv", delete=False)
-            fp.write(
-                self.blob_result_cc.get_blob_client(case_blob).download_blob().readall()
+                fp.flush()
+                case_filepaths.append(fp.name)
+
+            input_filepath = self.download_src_blob()
+
+            water_safety = get_water_safety(
+                frc_target=frc_target,
+                case_filepaths=case_filepaths,
+                input_file=input_filepath,
             )
-            fp.flush()
-            case_filepaths.append(fp.name)
-
-        input_filepath = self.download_src_blob()
-
-        water_safety = get_water_safety(
-            frc_target=frc_target,
-            case_filepaths=case_filepaths,
-            input_file=input_filepath,
-        )
 
         self.update_dataset(
             {
@@ -211,7 +217,8 @@ class AnalysisUtils:
         )
         self.send_analysis_confirmation_email()
 
-    def send_error_email(self, method: AnalysisMethod, message: str):
+    def get_error_message(self, message: str, analysis_method: AnalysisMethod):
+        web_url = os.getenv("WEBURL")
         country_name = self.locations["country"]
         area_name = self.locations["area"]
         fieldsite_name = self.locations["fieldsite"]
@@ -222,33 +229,56 @@ class AnalysisUtils:
         date_of_analysis: datetime = dataset["dateCreated"]
         first_sample = dataset["firstSample"]
         last_sample = dataset["lastSample"]
+        error_message = f"""An error occurred during analysis.
+                        Analysis type: {analysis_method.value}
+                        Dataset ID: {self.dataset_id}
+                        User name: {user_fullname}
+                        User email: {user_email}
+                        Fieldsite: {fieldsite_name}
+                        Area: {area_name}
+                        Country: {country_name}
+                        Date of analysis: {date_of_analysis.isoformat()}
+                        First sample: {first_sample.isoformat()}
+                        Last sample: {last_sample.isoformat()}
+                        Environment: {web_url}
 
+                        Stack trace:
+                        {message}
+                        """
+
+        return error_message
+
+    def send_error_email(self, analysis_method: AnalysisMethod, error_message: str):
         email = Mail(
             from_email="no-reply@safeh2o.app",
             to_emails=self.error_recepient,
         )
-        email.subject = f"Error in {self.rg_name} {method.value}"
+        email.subject = f"Error in {self.rg_name} {analysis_method.value}"
         email.add_content(
             Content(
                 "text/plain",
-                f"""An error occurred during analysis.
-                Analysis type: {method.value}
-                Dataset ID: {self.dataset_id}
-                User name: {user_fullname}
-                User email: {user_email}
-                Fieldsite: {fieldsite_name}
-                Area: {area_name}
-                Country: {country_name}
-                Date of analysis: {date_of_analysis.isoformat()}
-                First sample: {first_sample.isoformat()}
-                Last sample: {last_sample.isoformat()}
-
-                Stack trace: 
-                {message}
-                """,
+                error_message,
             )
         )
         self.sg_client.send(email)
+
+    def send_slack_message(self, message: str):
+        webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+        if not webhook_url:
+            logging.error("Slack webhook URL not set. Not sending Slack message")
+            return
+
+        headers = {"Content-Type": "application/json"}
+        body = {"text": message}
+
+        requests.post(webhook_url, data=json.dumps(body), headers=headers)
+
+    def handle_error(self, analysis_method: AnalysisMethod, message: str):
+        error_message = self.get_error_message(message, analysis_method)
+
+        self.send_error_email(analysis_method, error_message)
+        if os.getenv("ENABLE_SLACK_NOTIFICATIONS", False):
+            self.send_slack_message(error_message)
 
     def get_fieldsite_id(self):
         dataset = self.get_dataset()
