@@ -260,7 +260,7 @@ def try_format(num_string: str, cast_type):
 
 
 def get_bad_columns(datapoint: Datapoint):
-    TWO_DAYS = 48 * 3600  # two days in seconds
+    MAX_STORE = 5*24 * 3600  # two days in seconds
     bad_columns = set()
     now = datetime.now(timezone.utc)
     # if ts date is null or in the future
@@ -276,7 +276,7 @@ def get_bad_columns(datapoint: Datapoint):
         and (
             datapoint.ts_date > datapoint.hh_date  # if tapstand is later than household
             or (datapoint.hh_date - datapoint.ts_date).total_seconds()
-            >= TWO_DAYS  # if time difference is two days or greater
+            >= MAX_STORE  # if time difference is two days or greater
         )
     ):
         bad_columns.update({"ts_date", "hh_date"})  # highlight both ts and hh dates
