@@ -12,11 +12,11 @@ black==22.6.0
 openpyxl==3.0.10
 dnspython==2.2.1
 sendgrid==6.9.7
-certifi==2022.6.15
+# certifi==2022.6.15
 
 # ann/eo requirements
 numpy==1.22.0
 pandas==1.4.2
 beautifulsoup4==4.11.1
 git+https://github.com/safeh2o/swot-ann@main
-git+https://github.com/safeh2o/swot-eo@main
+git+https://github.com/safeh2o/swot-eo@threadsafe_matplotlib

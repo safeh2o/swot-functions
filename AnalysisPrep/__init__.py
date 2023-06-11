@@ -7,7 +7,8 @@ from typing import Any, Dict
 
 import azure.durable_functions as df
 import azure.functions as func
-import certifi
+
+# import certifi
 from bson import ObjectId
 from pymongo import MongoClient
 from utils.standardize import Datapoint
@@ -56,15 +57,13 @@ def remove_duplicates(datapoints: list[dict]) -> list[Datapoint]:
 
 
 def main(msg: dict, output: func.Out[str]) -> None:
-    ca = certifi.where()
+    # ca = certifi.where()
     dataset_id = msg["datasetId"]
     logging.info(
         "In AnalysisPrep: %s",
         msg,
     )
-    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
-        MONGODB_CONNECTION_STRING, tlsCAFile=ca
-    )
+    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(MONGODB_CONNECTION_STRING)
     db = mongo_client.get_database()
     dataset_collection = db.get_collection("datasets")
     datapoint_collection = db.get_collection("datapoints")

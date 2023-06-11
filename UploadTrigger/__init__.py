@@ -8,7 +8,8 @@ from typing import Any, Dict
 from uuid import uuid4
 
 import azure.functions as func
-import certifi
+
+# import certifi
 import openpyxl
 from azure.storage.blob import BlobClient, ContainerClient
 from bson.objectid import ObjectId
@@ -54,7 +55,7 @@ def convert_xlsx_blob_to_csv(
 
 
 def main(msg: func.QueueMessage) -> None:
-    ca = certifi.where()
+    # ca = certifi.where()
     msg_json = msg.get_json()
     upload_id = msg_json["uploadId"]
     uploader_email = msg_json["uploaderEmail"]
@@ -67,9 +68,7 @@ def main(msg: func.QueueMessage) -> None:
     AZURE_STORAGE_CONNECTION_STRING = os.getenv("AzureWebJobsStorage", "")
     UPLOAD_COLLECTION_NAME = os.getenv("UPLOAD_COLLECTION_NAME", "")
 
-    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(
-        MONGODB_CONNECTION_STRING, tlsCAFile=ca
-    )
+    mongo_client: MongoClient[Dict[str, Any]] = MongoClient(MONGODB_CONNECTION_STRING)
     db = mongo_client.get_database()
     col = db.get_collection(UPLOAD_COLLECTION_NAME)
     upl = col.find_one({"_id": ObjectId(upload_id)})
