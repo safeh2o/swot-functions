@@ -279,7 +279,8 @@ def get_bad_columns(datapoint: Datapoint):
             >= MAX_STORE  # if time difference is two days or greater
         )
     ):
-        bad_columns.update({"ts_date", "hh_date"})  # highlight both ts and hh dates
+        # highlight both ts and hh dates
+        bad_columns.update({"ts_date", "hh_date"})
 
     # if ts frc is null
     if datapoint.ts_frc == None or datapoint.ts_frc <= 0:
@@ -324,6 +325,9 @@ def extract(filename: str) -> tuple[list[Datapoint], list]:
 
         line = l.strip().split(",")
 
+        for _ in range(len(line), max(indices.values())+1):
+            line.append(None)
+
         ts_date = format_unknown_date(line[indices["ts_datetime"]])
         hh_date = format_unknown_date(line[indices["hh_datetime"]])
         ts_frc = try_format(line[indices["ts_frc"]], float)
@@ -338,7 +342,8 @@ def extract(filename: str) -> tuple[list[Datapoint], list]:
         bad_columns_in_datapoint = get_bad_columns(datapoint)
 
         if bad_columns_in_datapoint:
-            err = StandardizationError(row_number, datapoint, bad_columns_in_datapoint)
+            err = StandardizationError(
+                row_number, datapoint, bad_columns_in_datapoint)
             errors.append(err)
         else:
             datapoints.append(datapoint)
